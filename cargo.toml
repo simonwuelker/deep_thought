@@ -1,0 +1,23 @@
+[package]
+name = "rust_nn"
+version = "0.1.0"
+authors = ["Wuelle <simon.wuelker@arcor.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dev-dependencies]
+# criterion = { version = "0.3", features = ['html_reports'] }
+
+[dependencies]
+anyhow = "1"
+thiserror = "1"
+serde = { version = "1", features = ['derive']}
+csv = "1.1"
+ndarray = { version = "0.15", features = ['serde'] }
+ndarray-linalg = "0.12"
+ndarray-rand = "0.14"
+
+[[bench]]
+name = "test_benchmark"
+harness = false
