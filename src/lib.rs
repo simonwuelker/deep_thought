@@ -4,6 +4,7 @@
 mod neural_network;
 mod activation;
 mod error;
+mod tensor;
 
 #[cfg(test)]
 mod tests {
@@ -37,8 +38,24 @@ mod tests {
         }
         Ok(())
     }
+    use crate::*;
+    #[test]
+    fn activation_functions() {
+        // ReLU
+        let mut x = -1.0;
+        let mut y = 1.0;
+        activation::relu(&mut x);
+        activation::relu(&mut y);
+        assert_eq!(0.0, x);
+        assert_eq!(1.0, y);
 
-    use crate::neural_network::*;
+        // Sigmoid
+        x = 0.0;
+        activation::sigmoid(&mut x);
+        assert_eq!(0.5, x);
+    }
+
+    use crate::neural_network::{Layer, NeuralNetworkBuilder};
     use ndarray::prelude::*;
     #[test]
     fn layer_forward_pass() -> Result<()>{

@@ -1,4 +1,3 @@
-use serde::{Serialize, Deserialize};
 use anyhow::Result;
 use ndarray::prelude::*;
 use crate::error::Error;
@@ -7,17 +6,18 @@ use ndarray_rand::{
     rand_distr::Uniform,
 };
 
-#[derive(Serialize, Deserialize)]
 pub struct NeuralNetworkBuilder {
     layers: Vec<Layer>,
+    learning_rate: f32,
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Layer {
     weights: Array2<f32>,
     bias: Array2<f32>,
     input_dim: usize,
     output_dim: usize,
+    d_weights: Array2<f32>,
+    d_bias: Array2<f32>,
 }
 
 impl Layer {
@@ -28,6 +28,8 @@ impl Layer {
             bias: Array::random((output_dim, input_dim), Uniform::new(-1.0, 1.)),
             input_dim: input_dim,
             output_dim: output_dim,
+            d_weights: Array::zeros((output_dim, input_dim)),
+            d_bias: Array::zeros((output_dim, input_dim)),
         }
     }
 
@@ -39,11 +41,15 @@ impl Layer {
                 found: parameters.1.raw_dim().into_dyn(),
             }.into());
         }
+        let input_dim = parameters.0.ncols();
+        let output_dim = parameters.0.nrows();
         Ok(Layer {
-            input_dim: parameters.0.ncols(),
-            output_dim: parameters.0.nrows(),
             weights: parameters.0,
             bias: parameters.1,
+            d_weights: Array2::zeros((output_dim, input_dim)),
+            d_bias: Array2::zeros((output_dim, input_dim)),
+            input_dim: input_dim,
+            output_dim: output_dim,
         })
     }
 
@@ -84,13 +90,21 @@ impl NeuralNetworkBuilder {
     pub fn new() -> NeuralNetworkBuilder {
         NeuralNetworkBuilder {
             layers: vec![],
+            learning_rate: 0.1,
         }
     }
 
+    /// add a hidden layer to the network
     pub fn add_layer(mut self, layer: Layer) -> NeuralNetworkBuilder {
         self.layers.push(layer);
         self
     }
+
+    // /// add an activation function to the network
+    // pub fn add_activation(mut self, activation: &Activation) -> NeuralNetworkBuilder {
+    //     self.operations.push(Operation::Activation(Box::new(activation)));
+    //     self
+    // }
 
     /// forward-pass a 1D vector through the network
     pub fn forward(&self, inp_: Array1<f32>) -> Array1<f32> {
@@ -101,17 +115,6 @@ impl NeuralNetworkBuilder {
         inp
     }
 
-     // /// add a activation function
-     // pub fn add_activation(&mut self, dyn fn(f32) -> f32) {
-     // }
-
-    /// Serialize the network to a provided path
-    pub fn serialize(&self) -> Result<()> {
-        unimplemented!()
-    }
-
-    /// Load the network from a provided path 
-    pub fn deserialize(path: String) -> Result<NeuralNetworkBuilder> {
-        unimplemented!()
+    pub fn backprop(&mut self) {
     }
 }
