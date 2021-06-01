@@ -1,88 +1,55 @@
 //! Neural Networks in Rust. Not much more for now
 // #![feature(test)]
 
-mod neural_network;
-mod activation;
-mod loss;
-mod error;
+pub mod neural_network;
+pub mod activation;
+pub mod loss;
+pub mod error;
+pub mod dataset;
+
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-    use serde::Deserialize;
+    #[test]
+    fn simple_net_test() {
+        let mut net = NeuralNetworkBuilder::new()
+            .learning_rate(0.05)
+            .add_layer(Layer::new(1, 1))
+            .add_layer(Layer::new(1, 1));
 
-    #[derive(Debug, Deserialize)]
-    struct HeartFailureRecord {
-        age: f32,
-        anaemia: f32,
-        creatinine_phosphokinase: f32,
-        diabetes: f32,
-        ejection_fraction: f32,
-        high_blood_pressure: f32,
-        platelets: f32,
-        serum_creatinine: f32,
-        serum_sodium: f32,
-        sex: f32,
-        smoking: f32,
-        time: f32,
-        death_event: f32,
+        let inp = array![0.6];
+        let target = array![0.3];
+
+        let mut last_loss = 50.0;
+        for index in 0..100 {
+            let out = net.forward(&inp);
+            last_loss = Loss::MSE.compute(&out, &target);
+            println!("In: {} Out: {} Loss: {}", &inp, &out, &last_loss);
+            net.backprop(inp.clone(), target.clone(), Loss::MSE);
+        }
+        assert!(last_loss < 0.001);
+        assert!(false);
     }
 
-    impl HeartFailureRecord {
-        fn build_input(&self) -> Array1<f32> {
-            Array::from_vec(vec![
-                self.age, self.anaemia, self.creatinine_phosphokinase, self.diabetes, self.ejection_fraction, self.high_blood_pressure,
-                self.platelets, self.serum_creatinine, self.serum_sodium, self.sex, self.smoking, self.time,
-            ])
-        }
-
-        fn build_target(&self) -> Array1<f32> {
-            Array::from_vec(vec![
-                self.death_event,
-            ])
-        }
-    }
-
-    use ndarray::prelude::*;
-    use crate::{
-        activation::Activation,
-        neural_network::{Layer, NeuralNetworkBuilder},
-        loss::Loss,
-    };
+    // #[test]
+    // fn dataset_normalization() {
+    //     let original = Array::random((3, 3), Uniform::new(-1., 1.)),
+    //     let dataset = Dataset::new(original,
+    // }
 
     #[test]
-    fn heart_failure_classification() -> Result<()>{
-        // Dataset from https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
-        let mut rdr = csv::Reader::from_path("datasets/heart_failure_clinical_records_dataset.csv")?;
-        // can probably be done via sth like rdr.deserialize().into_vec()
-        let mut records: Vec<HeartFailureRecord> = vec![];
-        for result in rdr.deserialize() {
-            let record: HeartFailureRecord = result?;
-            records.push(record);
-        }
+    fn can_we_use_dot() {
+        let inp = array![1., 2., 3.];
+        let weights = array![
+            [0.5, 0.3, 1.2],
+            [1.6, 2.0, 0.0],
+            [1.7, 0.3, 0.6],
+            [0.1, 0.2, 0.4],
+        ];
 
-        let train_records = &records[..200];
-        let test_records = &records[200..];
-
-        // Build the neural net
-        let mut net = NeuralNetworkBuilder::new()
-            .add_layer(Layer::new(12, 20))
-            .add_layer(Layer::new(20, 10))
-            .add_layer(Layer::new(10, 5))
-            .add_layer(Layer::new(5, 1).activation(Activation::Sigmoid));
-
-        // evaluate the net 
-        let mut total_loss: f32 = 0.;
-        for record in test_records {
-            let out = net.forward(record.build_input());
-            let target = record.build_target();
-            total_loss += Loss::MSE.compute(out, target);
-        }
-
-        println!("Mean loss over 100 test samples: {}", total_loss / 100.);
-        assert!(false);
-
-        Ok(())
+        let the_previous_way = (&inp * &weights).sum_axis(Axis(1));
+        let the_new_way = weights.dot(&inp);
+        assert_eq!(the_previous_way, the_new_way);
     }
 
     // use crate::neural_network::{Layer, NeuralNetworkBuilder};
@@ -98,17 +65,6 @@ mod tests {
     //     assert_eq!(array![-1.0, -1.0], l.A);
     //     Ok(())
     // }
-
-    #[test]
-    fn network_forward_pass() {
-        let mut network = NeuralNetworkBuilder::new()
-            .add_layer(Layer::new(10, 15))
-            .add_layer(Layer::new(15, 20))
-            .add_layer(Layer::new(20, 10));
-        let res = network.forward(Array1::ones(10));
-        println!("{:?}", res);
-        assert!(false);
-    }
 
     // use test::Bencher;
     // // just a test benchmark

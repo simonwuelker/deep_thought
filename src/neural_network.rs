@@ -12,15 +12,15 @@ use ndarray_rand::{
 
 pub struct NeuralNetworkBuilder {
     layers: Vec<Layer>,
-    learning_rate: f32,
+    lr: f64,
 }
 
 #[allow(non_snake_case)] // snake case kinda makes sense with matrices
 pub struct Layer {
     /// weight matrix
-    W: Array2<f32>,
-    /// bias matrix
-    B: Array2<f32>,
+    W: Array2<f64>,
+    /// bias vector
+    B: Array1<f64>,
     /// number of input dimensions
     input_dim: usize,
     /// number of output dimensions
@@ -28,37 +28,27 @@ pub struct Layer {
     /// some activation function
     activation: Activation,
     /// inp * weight  + bias
-    Z: Array1<f32>,
+    Z: Array1<f64>,
     /// activation(Z), the actual activation of the neurons
-    A: Array1<f32>,
-    d_weights: Array2<f32>,
-    d_bias: Array2<f32>,
+    A: Array1<f64>,
 }
 
 impl Layer {
     /// construct a new layer with provided dimensions and random weights/biases
     pub fn new(input_dim: usize, output_dim: usize) -> Layer {
         Layer {
-            W: Array::random((output_dim, input_dim), Uniform::new(-1.0, 1.)),
-            B: Array::random((output_dim, input_dim), Uniform::new(-1.0, 1.)),
+            W: Array::random((output_dim, input_dim), Uniform::new(-1., 1.)),
+            B: Array::random(output_dim, Uniform::new(-1., 1.)),
             input_dim: input_dim,
             output_dim: output_dim,
             activation: Activation::default(),
             Z: Array::zeros(output_dim),
             A: Array::zeros(output_dim),
-            d_weights: Array::zeros((output_dim, input_dim)),
-            d_bias: Array::zeros((output_dim, input_dim)),
         }
     }
 
     /// construct a layer from provided weight/bias parameters
-    pub fn from_parameters(parameters: (Array2<f32>, Array2<f32>)) -> Result<Layer> {
-        if parameters.0.raw_dim() != parameters.1.raw_dim() {
-            return Err(Error::MismatchedDimensions{
-                expected: parameters.0.raw_dim().into_dyn(), 
-                found: parameters.1.raw_dim().into_dyn(),
-            }.into());
-        }
+    pub fn from_parameters(parameters: (Array2<f64>, Array1<f64>)) -> Result<Layer> {
         let input_dim = parameters.0.ncols();
         let output_dim = parameters.0.nrows();
         Ok(Layer {
@@ -67,20 +57,18 @@ impl Layer {
             Z: Array::zeros(output_dim),
             A: Array::zeros(output_dim),
             activation: Activation::default(),
-            d_weights: Array::zeros((output_dim, input_dim)),
-            d_bias: Array2::zeros((output_dim, input_dim)),
             input_dim: input_dim,
             output_dim: output_dim,
         })
     }
 
     /// get the weights/biases of the neurons
-    pub fn get_parameters(&self) -> (Array2<f32>, Array2<f32>) {
+    pub fn get_parameters(&self) -> (Array2<f64>, Array1<f64>) {
         (self.W.clone(), self.B.clone())
     }
 
     /// manually set weights/biases for the neurons
-    pub fn set_parameters(&mut self, parameters: (Array2<f32>, Array2<f32>)) -> Result<()> {
+    pub fn set_parameters(&mut self, parameters: (Array2<f64>, Array1<f64>)) -> Result<()> {
         // make sure the dimensions match before replacing the old ones
         if self.W.raw_dim() != parameters.0.raw_dim() {
             return Err(Error::MismatchedDimensions{
@@ -108,8 +96,8 @@ impl Layer {
     }
 
     /// forward-pass a input vector through the layer
-    pub fn forward(&mut self, inp: &Array1<f32>) {
-        self.Z = ((inp * &self.W) + &self.B).sum_axis(Axis(1));
+    pub fn forward(&mut self, inp: &Array1<f64>) {
+        self.Z = self.W.dot(inp) + &self.B;
         self.A = self.activation.compute(&self.Z);
     }
 }
@@ -118,7 +106,7 @@ impl NeuralNetworkBuilder {
     pub fn new() -> NeuralNetworkBuilder {
         NeuralNetworkBuilder {
             layers: vec![],
-            learning_rate: 0.1,
+            lr: 0.01,
         }
     }
 
@@ -128,8 +116,14 @@ impl NeuralNetworkBuilder {
         self
     }
 
+    /// manually set the learning rate, default is 0.01
+    pub fn learning_rate(mut self, lr: f64) -> NeuralNetworkBuilder {
+        self.lr = lr;
+        self
+    }
+
     /// forward-pass a 1D vector through the network
-    pub fn forward(&mut self, inp: Array1<f32>) -> Array1<f32> {
+    pub fn forward(&mut self, inp: &Array1<f64>) -> Array1<f64> {
         for index in 0..self.layers.len() {
             if index == 0 {
                 self.layers[index].forward(&inp);
@@ -141,18 +135,49 @@ impl NeuralNetworkBuilder {
         self.layers.iter().last().unwrap().A.clone()
     }
 
-    pub fn backprop(&mut self, target: Array1<f32>, loss: Loss) {
-        // .enumerate is used in a confusing way here but its actually easier
-        // let mut dz: Array2<f32>;
-        // for (index, layer) in &mut self.layers.iter().reverse().enumerate() {
-        //     if index == 0 {
-        //         dz = match loss {
-        //             loss::MSE => target - layer.activation,
-        //         }
-        //     } else {
-        //         dz = 
-        //     }
-        // }
+    /// Backpropagate the output through the network and adjust weights/biases to further match the 
+    /// desired target
+    pub fn backprop(&mut self, input: Array1<f64>, target: Array1<f64>, loss: Loss) {
+        let num_layers = self.layers.len();
+
+        // backpropagation for last layer is a bit special because of the cost function
+        let last_layer = &self.layers[num_layers - 1];
+        let mut dz = last_layer.activation.derivative(&last_layer.Z) * loss.derivative(&last_layer.A, &target);
+        let mut dw = &dz * &self.layers[num_layers - 2].A;
+        let mut db = &dz;
+
+        let last_layer_mut = &mut self.layers[num_layers - 1];
+        last_layer_mut.W = &last_layer_mut.W - dw * self.lr;
+        last_layer_mut.B = &last_layer_mut.B - db * self.lr;
+
+        // all the layers in the middle are the same
+        for n_ in 1..num_layers - 1 {
+            // i forgot why .reverse doesnt work so this will have to do
+            let n = num_layers - n_ - 1;
+
+            let nth_layer = &self.layers[n];
+            // dz = nth_layer.activation.derivative(&nth_layer.Z) * &self.layers[n + 1].W.sum_axis(Axis(0)) * dz;
+            dz = nth_layer.activation.derivative(&nth_layer.Z) * &self.layers[n + 1].W.sum_axis(Axis(0)) * &dz;
+            println!("dz: {}", &dz);
+            println!("A: {}", &self.layers[n - 1].A);
+            panic!("no worki");
+            dw = &dz * &self.layers[n - 1].A;
+            db = &dz;
+
+            let nth_layer_mut = &mut self.layers[n];
+            nth_layer_mut.W = &nth_layer_mut.W - dw * self.lr;
+            nth_layer_mut.B = &nth_layer_mut.B - db * self.lr;
+
+        }
+        // first layer is a bit special again bc its input isn't the previous layer's activation, it's the input!
+        let first_layer = &self.layers[0];
+        dz = dz * (first_layer.activation.derivative(&first_layer.Z) * &self.layers[1].W).sum_axis(Axis(0));
+        let dw = &dz * &input;
+        let db = &dz;
+
+        let first_layer_mut = &mut self.layers[0];
+        first_layer_mut.W = &first_layer_mut.W - dw * self.lr;
+        first_layer_mut.B = &first_layer_mut.B - db * self.lr
     }
 }
 
