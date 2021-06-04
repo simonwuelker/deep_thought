@@ -6,10 +6,18 @@ pub mod activation;
 pub mod loss;
 pub mod error;
 pub mod dataset;
+pub mod prelude;
 
 
 #[cfg(test)]
 mod tests {
+    use anyhow::Result;
+    use crate::prelude::*;
+    use ndarray::prelude::*;
+    use ndarray_rand::RandomExt;
+    use ndarray_rand::rand_distr::Uniform;
+    use ndarray_linalg::assert_close_max;
+
     #[test]
     fn simple_net_test() {
         let mut net = NeuralNetworkBuilder::new()
@@ -31,11 +39,18 @@ mod tests {
         assert!(false);
     }
 
-    // #[test]
-    // fn dataset_normalization() {
-    //     let original = Array::random((3, 3), Uniform::new(-1., 1.)),
-    //     let dataset = Dataset::new(original,
-    // }
+    #[test]
+    fn dataset_normalization() -> Result<()> {
+        let sample_orig = Array::random((3, 3), Uniform::new(-1., 1.));
+        let label_orig = Array::random((3, 2), Uniform::new(-1., 1.));
+        let dataset = Dataset::new(sample_orig.clone(), label_orig.clone(), 1.0)?;
+        for (index, (sample_norm, label_norm)) in dataset.iter_train().enumerate() {
+            // TODO: ndarray and ndarray_rand are interfering with each other!
+            // assert_close_max!(sample_orig.index_axis(Axis(0), index), &dataset.denormalize_record(sample_norm), EPSILON);
+            // assert_close_max!(label_orig.index_axis(Axis(0), index), &dataset.denormalize_label(label_norm), EPSILON);
+        }
+        Ok(())
+    }
 
     #[test]
     fn can_we_use_dot() {
@@ -52,8 +67,6 @@ mod tests {
         assert_eq!(the_previous_way, the_new_way);
     }
 
-    // use crate::neural_network::{Layer, NeuralNetworkBuilder};
-    // use ndarray::prelude::*;
     // #[test]
     // fn layer_forward_pass() -> Result<()>{
     //     let weights = Array::from_elem((2, 4), 0.5);

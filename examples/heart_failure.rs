@@ -5,7 +5,7 @@ use rust_nn::{
     activation::Activation,
     neural_network::{Layer, NeuralNetworkBuilder},
     loss::Loss,
-    dataset::Dataset,
+    dataset::{Dataset, BatchSize},
 };
 
 #[derive(Debug, Deserialize)]
@@ -40,32 +40,33 @@ fn main() -> Result<()>{
         labels.push_row(ArrayView::from(&vec![r.death_event]))?;
     }
 
-    let dataset = Dataset::new(records, labels, 0.8)?;
+    let dataset = Dataset::new(records, labels, 0.8, BatchSize::Number(2))?;
 
     // Build the neural net
     let mut net = NeuralNetworkBuilder::new()
-        .add_layer(Layer::new(12, 20).activation(Activation::ReLU))
+        .learning_rate(0.01)
+        .add_layer(Layer::new(12, 20))
         .add_layer(Layer::new(20, 10))
         .add_layer(Layer::new(10, 5))
-        .add_layer(Layer::new(5, 1).activation(Activation::Sigmoid));
+        .add_layer(Layer::new(5, 1));//.activation(Activation::Sigmoid));
 
     // train the network
-    for (sample, label) in dataset.iter_train() {
-        let _out = net.forward(&sample);
-        println!("inp: {}, out: {}, target: {}", sample, _out, label);
-
-        net.backprop(sample, label, Loss::MSE);
+    for epoch in 0..1 {
+        println!("training epoch {}", epoch);
+        for (samples, labels) in dataset.iter_train().into_iter().take(5) {
+            let _out = net.forward(&samples);
+            println!("{}", _out);
+            net.backprop(samples, labels, Loss::MSE);
+        }
     }
 
     // evaluate the net 
     // let mut total_loss: f64 = 0.;
     // let loss = Loss::MSE;
-    // for record in test_records {
-    //     let inp = record.build_input();
-    //     let out = net.forward(&inp);
-    //     let target = record.build_target();
-    //     println!("{} should be {} results in loss = {}", &out, &target, loss.compute(&out, &target));
-    //     total_loss += loss.compute(&out, &target);
+    // for (sample, label) in dataset.iter_test() {
+    //     let out = net.forward(&sample);
+    //     println!("{} should be {}", &out, &label);
+    //     total_loss += loss.compute(&out, &label);
     // }
 
     // println!("Mean loss over 100 test samples: {}", total_loss / 100.);
