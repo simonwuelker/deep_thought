@@ -45,13 +45,13 @@ impl Dataset {
         })
     }
 
-    /// Denormalize a record vector into its original form
-    pub fn denormalize_record(&self, normalized: Array1<f64>) -> Array1<f64> {
+    /// Denormalize a batch of record vectors into its original form
+    pub fn denormalize_records(&self, normalized: Array2<f64>) -> Array2<f64> {
         normalized * &self.record_means
     }
 
-    /// Denormalize a label vector into its original form
-    pub fn denormalize_label(&self, normalized: Array1<f64>) -> Array1<f64> {
+    /// Denormalize a batch of label vectors into its original form
+    pub fn denormalize_labels(&self, normalized: Array2<f64>) -> Array2<f64> {
         normalized * &self.label_means
     }
 
@@ -100,8 +100,8 @@ impl Dataset {
 /// samples and labels have the shape (num_fields x batch_size)
 pub struct SampleIterator {
     index: usize,
-    num_batches: usize,
-    batch_size: usize,
+    pub num_batches: usize,
+    pub batch_size: usize,
     samples: Array2<f64>,
     labels: Array2<f64>,
 }

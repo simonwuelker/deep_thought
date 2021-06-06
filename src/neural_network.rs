@@ -10,7 +10,6 @@ use ndarray_rand::{
     rand_distr::Uniform,
 };
 
-
 pub struct NeuralNetworkBuilder {
     layers: Vec<Layer>,
     lr: f64,
@@ -29,28 +28,28 @@ pub struct Layer {
     /// Activation(Z), the actual activation of the neurons
     A: Array2<f64>,
     /// Accumulated weight gradients
-    d_W: Array2<f64>,
+    dW: Array2<f64>,
     /// Accumulated bias gradients
-    d_B: Array1<f64>,
+    dB: Array2<f64>,
 }
 
 impl Layer {
     /// construct a new layer with provided dimensions and random weights/biases
     pub fn new(input_dim: usize, output_dim: usize) -> Layer {
+        let factor = (2. / output_dim as f64).sqrt();
         Layer {
-            W: Array::random((output_dim, input_dim), Uniform::new(-1., 1.)),
-            B: Array::random((output_dim, 1), Uniform::new(-1., 1.)),
+            W: Array::random((output_dim, input_dim), Uniform::new(-1., 1.)) * factor,
+            B: Array::random((output_dim, 1), Uniform::new(-1., 1.)) * factor,
             activation: Activation::default(),
             Z: Array::zeros((0, output_dim)),
             A: Array::zeros((0, output_dim)),
-            d_W: Array::zeros((0,0)),
-            d_B: Array::zeros(0),
+            dW: Array::zeros((0,0)),
+            dB: Array::zeros((0, 0)),
         }
     }
 
     /// construct a layer from provided weight/bias parameters
     pub fn from_parameters(parameters: (Array2<f64>, Array2<f64>)) -> Result<Layer> {
-        let input_dim = parameters.0.ncols();
         let output_dim = parameters.0.nrows();
         Ok(Layer {
             W: parameters.0,
@@ -58,8 +57,8 @@ impl Layer {
             Z: Array::zeros((0, output_dim)),
             A: Array::zeros((0, output_dim)),
             activation: Activation::default(),
-            d_W: Array::zeros((0,0)),
-            d_B: Array::zeros(0),
+            dW: Array::zeros((0,0)),
+            dB: Array::zeros((0, 0)),
         })
     }
 
@@ -98,11 +97,6 @@ impl Layer {
 
     /// forward-pass a batch of input vectors through the layer
     pub fn forward(&mut self, inp: &Array2<f64>) {
-        // println!("------");
-        // println!("self.B.shape: {:?}", self.B.shape());
-        // println!("self.W.shape: {:?}", self.W.shape());
-        // println!("inp.shape:  {:?}", inp.shape());
-        // println!("------");
         self.Z = self.W.dot(inp) + &self.B;
         self.A = self.activation.compute(&self.Z);
     }
@@ -143,41 +137,61 @@ impl NeuralNetworkBuilder {
 
     /// Backpropagate the output through the network and adjust weights/biases to further match the 
     /// desired target
-    pub fn backprop(&mut self, input: Array2<f64>, target: Array2<f64>, loss: Loss) {
+    pub fn backprop(&mut self, input: Array2<f64>, target: Array2<f64>, loss: &Loss) {
         let num_layers = self.layers.len();
         // Initial dz for the last layer
-        // might need to be .A in the activation derivative
+        // dz is the error in the layers Z value - sometimes also denoted as delta
         let mut dz = &self.layers[num_layers - 1].activation.derivative(&self.layers[num_layers - 1].Z) * 
             loss.derivative(&self.layers[num_layers - 1].A, &target);
-        //let mut dz = loss.derivative(&self.layers[num_layers - 1].A, &target);
+        // assert_eq!(dz.shape(), self.layers[num_layers - 1].B.shape());
+
+
+        // println!("this should be 2 0 0 2: {}", loss.derivative(&self.layers[num_layers - 1].A, &target));
+        // println!("target: {}", target);
 
         for n in (0..num_layers).rev() {
+            // println!("Optimizing Layer {}", n);
             let nth_layer = &self.layers[n];
 
             // determine the vector that is fed into the nth layer
             let nth_layer_input = if n == 0 {
-                &input
+               &input 
             } else {
                 &self.layers[n - 1].A
             };
 
+            //println!("");
             // find the derivative of the cost function with respect to the nth layers Z value
             if n != num_layers - 1 {
-                dz = nth_layer.activation.derivative(&nth_layer.Z) * &self.layers[n + 1].W.clone().reversed_axes().dot(&dz);
+                // println!("previous delta shape: {:?}", dz.shape());
+                dz = &self.layers[n + 1].W.to_owned().reversed_axes().dot(&dz) *
+                    nth_layer.activation.derivative(&nth_layer.Z);
+                // println!("weights transposed shape: {:?}", &self.layers[n + 1].W.to_owned().reversed_axes().shape());
+                // println!("acti derivative shape: {:?}", nth_layer.activation.derivative(&nth_layer.Z).shape());
             }
-            println!("optimizing the layer which goes from {} to {}", nth_layer.W.nrows(), nth_layer.W.ncols());
-
-            // println!("dz shape: {:?}", dz.shape());
             
-            let dw = &dz.dot(&nth_layer_input.clone().reversed_axes());
+            
+            // THIS TRAIL IS HOT
+            // println!("delta shape (last index is batches: {:?}", dz.shape());
+            // println!("input shape (last index should also be batches: {:?}", &nth_layer_input.shape());
+            let dw = &dz.dot(&nth_layer_input.to_owned().reversed_axes());
+            // println!("dw shape is now: {:?}", &dw.shape());
             let db = (&dz.sum_axis(Axis(1))).to_shape((dz.nrows(), 1)).unwrap().to_owned(); // need to add an extra dim
 
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.W = &nth_layer_mut.W - dw * self.lr;
-            // println!("B shape before: {:?}", nth_layer_mut.B.shape());
-            nth_layer_mut.B = &nth_layer_mut.B - db * self.lr;
-            // println!("B shape after: {:?}", nth_layer_mut.B.shape());
+            nth_layer_mut.dW = dw.to_owned();// &nth_layer_mut.W - dw * self.lr;
+            nth_layer_mut.dB = db.to_owned();// &nth_layer_mut.B - db * self.lr;
         }
+        for layer in &mut self.layers {
+            layer.W = &layer.W - &layer.dW * self.lr;
+            layer.B = &layer.B - &layer.dB * self.lr;
+        }
+        // for i in 0..num_layers {
+        //     println!("=====");
+        //     println!("Layer {}", i);
+        //     println!("W: {}", self.layers[i].W);
+        //     println!("B: {}", self.layers[i].B);
+        // }
     }
 }
 

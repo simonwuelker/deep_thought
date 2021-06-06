@@ -1,6 +1,7 @@
 use ndarray::prelude::*;
 
 /// Possible activation functions to apply on a Layer's Z value
+/// Each Activation function must be continuous and differentiable
 pub enum Activation {
     /// values < 0 become 0 
     ReLU,
