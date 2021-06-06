@@ -24,6 +24,7 @@ fn main() -> Result<()>{
     // Build the neural net
     let mut net = NeuralNetworkBuilder::new()
         .learning_rate(0.005)
+        .momentum(0.3)
         .add_layer(Layer::new(2, 3).activation(Activation::ReLU))
         .add_layer(Layer::new(3, 1).activation(Activation::ReLU));
     

@@ -13,6 +13,7 @@ use ndarray_rand::{
 pub struct NeuralNetworkBuilder {
     layers: Vec<Layer>,
     lr: f64,
+    momentum: f64,
 }
 
 #[allow(non_snake_case)] // non snake case kinda makes sense with matrices
@@ -43,8 +44,8 @@ impl Layer {
             activation: Activation::default(),
             Z: Array::zeros((0, output_dim)),
             A: Array::zeros((0, output_dim)),
-            dW: Array::zeros((0,0)),
-            dB: Array::zeros((0, 0)),
+            dW: Array::zeros((output_dim, input_dim)),
+            dB: Array::zeros((output_dim, 1)),
         }
     }
 
@@ -107,6 +108,7 @@ impl NeuralNetworkBuilder {
         NeuralNetworkBuilder {
             layers: vec![],
             lr: 0.01,
+            momentum: 0.,
         }
     }
 
@@ -119,6 +121,12 @@ impl NeuralNetworkBuilder {
     /// manually set the learning rate, default is 0.01
     pub fn learning_rate(mut self, lr: f64) -> NeuralNetworkBuilder {
         self.lr = lr;
+        self
+    }
+
+    /// set the momentum for gradient descent
+    pub fn momentum(mut self, momentum: f64) -> NeuralNetworkBuilder {
+        self.momentum = momentum;
         self
     }
 
@@ -143,11 +151,6 @@ impl NeuralNetworkBuilder {
         // dz is the error in the layers Z value - sometimes also denoted as delta
         let mut dz = &self.layers[num_layers - 1].activation.derivative(&self.layers[num_layers - 1].Z) * 
             loss.derivative(&self.layers[num_layers - 1].A, &target);
-        // assert_eq!(dz.shape(), self.layers[num_layers - 1].B.shape());
-
-
-        // println!("this should be 2 0 0 2: {}", loss.derivative(&self.layers[num_layers - 1].A, &target));
-        // println!("target: {}", target);
 
         for n in (0..num_layers).rev() {
             // println!("Optimizing Layer {}", n);
@@ -160,38 +163,23 @@ impl NeuralNetworkBuilder {
                 &self.layers[n - 1].A
             };
 
-            //println!("");
             // find the derivative of the cost function with respect to the nth layers Z value
             if n != num_layers - 1 {
-                // println!("previous delta shape: {:?}", dz.shape());
                 dz = &self.layers[n + 1].W.to_owned().reversed_axes().dot(&dz) *
                     nth_layer.activation.derivative(&nth_layer.Z);
-                // println!("weights transposed shape: {:?}", &self.layers[n + 1].W.to_owned().reversed_axes().shape());
-                // println!("acti derivative shape: {:?}", nth_layer.activation.derivative(&nth_layer.Z).shape());
             }
             
-            
-            // THIS TRAIL IS HOT
-            // println!("delta shape (last index is batches: {:?}", dz.shape());
-            // println!("input shape (last index should also be batches: {:?}", &nth_layer_input.shape());
             let dw = &dz.dot(&nth_layer_input.to_owned().reversed_axes());
-            // println!("dw shape is now: {:?}", &dw.shape());
             let db = (&dz.sum_axis(Axis(1))).to_shape((dz.nrows(), 1)).unwrap().to_owned(); // need to add an extra dim
 
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.dW = dw.to_owned();// &nth_layer_mut.W - dw * self.lr;
-            nth_layer_mut.dB = db.to_owned();// &nth_layer_mut.B - db * self.lr;
+            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + (1. - self.momentum) * dw.to_owned();
+            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + (1. - self.momentum) * db.to_owned();
         }
         for layer in &mut self.layers {
             layer.W = &layer.W - &layer.dW * self.lr;
             layer.B = &layer.B - &layer.dB * self.lr;
         }
-        // for i in 0..num_layers {
-        //     println!("=====");
-        //     println!("Layer {}", i);
-        //     println!("W: {}", self.layers[i].W);
-        //     println!("B: {}", self.layers[i].B);
-        // }
     }
 }
 
