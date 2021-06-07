@@ -7,7 +7,7 @@ use crate::{
 };
 use ndarray_rand::{
     RandomExt,
-    rand_distr::Uniform,
+    rand_distr::Normal,
 };
 
 pub struct NeuralNetworkBuilder {
@@ -37,10 +37,10 @@ pub struct Layer {
 impl Layer {
     /// construct a new layer with provided dimensions and random weights/biases
     pub fn new(input_dim: usize, output_dim: usize) -> Layer {
-        let factor = (2. / output_dim as f64).sqrt();
+        let std = (2. / (input_dim + output_dim) as f64).sqrt();
         Layer {
-            W: Array::random((output_dim, input_dim), Uniform::new(-1., 1.)) * factor,
-            B: Array::random((output_dim, 1), Uniform::new(-1., 1.)) * factor,
+            W: Array::random((output_dim, input_dim), Normal::new(0., std).unwrap()),
+            B: Array::zeros((output_dim, 1)),
             activation: Activation::default(),
             Z: Array::zeros((0, output_dim)),
             A: Array::zeros((0, output_dim)),
@@ -120,12 +120,14 @@ impl NeuralNetworkBuilder {
 
     /// manually set the learning rate, default is 0.01
     pub fn learning_rate(mut self, lr: f64) -> NeuralNetworkBuilder {
+        if lr < 0. { panic!("learning rate must be >= 0, got {}", lr); }
         self.lr = lr;
         self
     }
 
     /// set the momentum for gradient descent
     pub fn momentum(mut self, momentum: f64) -> NeuralNetworkBuilder {
+        if momentum < 0. { panic!("momentum must be >= 0, got {}", momentum); }
         self.momentum = momentum;
         self
     }
@@ -173,8 +175,8 @@ impl NeuralNetworkBuilder {
             let db = (&dz.sum_axis(Axis(1))).to_shape((dz.nrows(), 1)).unwrap().to_owned(); // need to add an extra dim
 
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + (1. - self.momentum) * dw.to_owned();
-            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + (1. - self.momentum) * db.to_owned();
+            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + (1. - self.momentum) * dw;
+            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + (1. - self.momentum) * db;
         }
         for layer in &mut self.layers {
             layer.W = &layer.W - &layer.dW * self.lr;

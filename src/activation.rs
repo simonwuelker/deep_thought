@@ -9,6 +9,8 @@ pub enum Activation {
     Linear,
     /// squash every input between 0 and 1
     Sigmoid,
+    /// Values < 0 get scaled down by a lot. Similar to ReLU except gradients don't become 0. LeakyReLu(0) = ReLU
+    LeakyReLU(f64),
 }
 
 impl Activation {
@@ -18,6 +20,7 @@ impl Activation {
             Activation::ReLU => inp.map(|&x| if x > 0. { x } else { 0. }),
             Activation::Linear => inp.clone(),
             Activation::Sigmoid => inp.map(|x| 1. / (1. + (-x).exp())),
+            Acitvation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
         }
     }
 
@@ -27,6 +30,7 @@ impl Activation {
             Activation::ReLU => inp.map(|&x| if x > 0. { 1. } else { 0. }),
             Activation::Linear => Array2::ones(inp.dim()),
             Activation::Sigmoid => self.compute(inp) * (Array::<f64, _>::ones(inp.raw_dim()) - self.compute(inp)),
+            Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { 1. } else { slope }),
         }
     }
 }

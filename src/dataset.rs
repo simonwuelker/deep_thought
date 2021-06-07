@@ -30,7 +30,8 @@ pub struct Dataset {
 }
 
 impl Dataset {
-    /// Create a new dataset, normalizing the inputs and labels
+    /// Create a new dataset from the given data. Data is split into training and testing data based on the train_test_split argument.
+    /// All Samples and labels are normalized by column, meaning that the mean across a column is always approximately 1
     pub fn new(records: Array2<f64>, labels: Array2<f64>, train_test_split: f64, batch_size: BatchSize) -> Result<Dataset> {
         let record_means = records.mean_axis(Axis(0)).ok_or(Error::NoData)?;
         let label_means = labels.mean_axis(Axis(0)).ok_or(Error::NoData)?;
@@ -120,22 +121,25 @@ impl Iterator for SampleIterator {
         }
     }
 }
-// struct TrainIterator<'a> {
+// struct SampleIterator<'a> {
 //     index: usize,
-//     num_samples: usize,
+//     pub num_batches: usize,
+//     pub batch_size: usize,
 //     samples: ArrayView<'a, f64, Dim<[usize; 2]>>,
 //     labels: ArrayView<'a, f64, Dim<[usize; 2]>>
 // }
 // 
-// impl<'a, 'b : 'a> Iterator for TrainIterator<'a> {
-//     type Item = (ArrayView<'b, f64, Dim<[usize; 1]>>, ArrayView<'b, f64, Dim<[usize;1 ]>>);
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.index > self.num_samples {
+// impl<'a> Iterator for SampleIterator<'a> {
+//     type Item = (ArrayView<'a, f64, Dim<[usize; 2]>>, ArrayView<'a, f64, Dim<[usize; 2]>>);
+//     fn next(&mut self) -> Option<(ArrayView<'a, f64, Dim<[usize; 2]>>, ArrayView<'a, f64, Dim<[usize; 2]>>)> {
+//         if self.index > self.num_batches {
 //             None
 //         }
 //         else {
+//             let batched_samples: ArrayView<'a, f64, Dim<[usize; 2]>>  = self.samples.slice(s![self.index * self.batch_size..(self.index + 1) * self.batch_size, ..]);
+//             let batched_labels = self.labels.slice(s![self.index * self.batch_size..(self.index + 1) * self.batch_size, ..]);
 //             self.index += 1;
-//             Some((self.samples.index_axis(Axis(0), self.index-1), self.labels.index_axis(Axis(0), self.index-1)))
+//             Some((batched_samples, batched_labels))
 //         }
 //     }
 // }

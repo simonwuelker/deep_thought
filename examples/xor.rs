@@ -23,17 +23,18 @@ fn main() -> Result<()>{
     
     // Build the neural net
     let mut net = NeuralNetworkBuilder::new()
-        .learning_rate(0.005)
-        .momentum(0.3)
-        .add_layer(Layer::new(2, 3).activation(Activation::ReLU))
-        .add_layer(Layer::new(3, 1).activation(Activation::ReLU));
+        .learning_rate(0.05)
+        .momentum(0.9)
+        .add_layer(Layer::new(2, 3))
+        .add_layer(Layer::new(3, 3))
+        .add_layer(Layer::new(3, 1));
     
     // train the network
     for epoch in 0..1000 {
         println!("training epoch {}", epoch);
         for (samples, labels) in dataset.iter_train().into_iter() {
             let _out = net.forward(&samples);
-            println!("{}", &loss_fn.compute(&_out, &labels));
+            println!("Loss: {}", &loss_fn.compute(&_out, &labels).mean().unwrap());
             net.backprop(samples, labels, &loss_fn);
         }
     }

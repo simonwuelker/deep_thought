@@ -16,7 +16,6 @@ mod tests {
     use ndarray::prelude::*;
     use ndarray_rand::RandomExt;
     use ndarray_rand::rand_distr::Uniform;
-    use ndarray_linalg::assert_close_max;
 
 
     #[test]
@@ -30,11 +29,11 @@ mod tests {
         let target = array![[0.3]];
 
         let mut last_loss = 50.0;
-        for index in 0..100 {
+        for _index in 0..100 {
             let out = net.forward(&inp);
             last_loss = Loss::MSE.compute(&out, &target).mean().unwrap();
             println!("In: {} Out: {} Loss: {}", &inp, &out, &last_loss);
-            net.backprop(inp.clone(), target.clone(), Loss::MSE);
+            net.backprop(inp.clone(), target.clone(), &Loss::MSE);
         }
         assert!(last_loss < 0.001);
         assert!(false);
