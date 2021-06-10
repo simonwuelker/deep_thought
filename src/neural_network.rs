@@ -154,7 +154,6 @@ impl NeuralNetworkBuilder {
         // dz is the error in the layers Z value - sometimes also denoted as delta
         let mut dz = &self.layers[num_layers - 1].activation.derivative(&self.layers[num_layers - 1].Z) * 
             loss.derivative(&self.layers[num_layers - 1].A, &target);
-        let mut halt = false;
 
         for n in (0..num_layers).rev() {
             let nth_layer = &self.layers[n];
