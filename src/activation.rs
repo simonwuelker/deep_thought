@@ -20,7 +20,7 @@ impl Activation {
             Activation::ReLU => inp.map(|&x| if x > 0. { x } else { 0. }),
             Activation::Linear => inp.clone(),
             Activation::Sigmoid => inp.map(|x| 1. / (1. + (-x).exp())),
-            Acitvation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
+            Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
         }
     }
 
@@ -30,7 +30,7 @@ impl Activation {
             Activation::ReLU => inp.map(|&x| if x > 0. { 1. } else { 0. }),
             Activation::Linear => Array2::ones(inp.dim()),
             Activation::Sigmoid => self.compute(inp) * (Array::<f64, _>::ones(inp.raw_dim()) - self.compute(inp)),
-            Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { 1. } else { slope }),
+            Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { 1. } else { *slope }),
         }
     }
 }

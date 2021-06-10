@@ -36,10 +36,11 @@ impl Dataset {
         let record_means = records.mean_axis(Axis(0)).ok_or(Error::NoData)?;
         let label_means = labels.mean_axis(Axis(0)).ok_or(Error::NoData)?;
         
+        // normalization temporarily turned off because debug
         Ok(Dataset {
             train_test_split: train_test_split,
-            records: records / &record_means,
-            labels: labels / &label_means,
+            records: records, // / &record_means,
+            labels: labels, // / &label_means,
             record_means: record_means,
             label_means: label_means,
             batch_size: batch_size,

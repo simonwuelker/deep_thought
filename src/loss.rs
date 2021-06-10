@@ -16,7 +16,7 @@ impl Loss {
     /// (how sensitive the result of the loss.compute fn is to changes in the output)
     pub fn derivative(&self, output: &Array2<f64>, target: &Array2<f64>) -> Array2<f64> {
         match &self {
-            Loss::MSE => output - target, // factor 2 is irrelevant because its constant
+            Loss::MSE => target - output, // factor 2 is irrelevant because its constant
         }
     }
 }

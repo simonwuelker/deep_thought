@@ -11,7 +11,7 @@ use ndarray_rand::{
 };
 
 pub struct NeuralNetworkBuilder {
-    layers: Vec<Layer>,
+    pub layers: Vec<Layer>,
     lr: f64,
     momentum: f64,
 }
@@ -19,9 +19,9 @@ pub struct NeuralNetworkBuilder {
 #[allow(non_snake_case)] // non snake case kinda makes sense with matrices
 pub struct Layer {
     /// Weight matrix
-    W: Array2<f64>,
+    pub W: Array2<f64>,
     /// Bias vector
-    B: Array2<f64>,
+    pub B: Array2<f64>,
     /// Activation function which turns self.Z into self.A
     activation: Activation,
     /// inp * weight  + bias
@@ -51,6 +51,7 @@ impl Layer {
 
     /// construct a layer from provided weight/bias parameters
     pub fn from_parameters(parameters: (Array2<f64>, Array2<f64>)) -> Result<Layer> {
+        let input_dim = parameters.0.ncols();
         let output_dim = parameters.0.nrows();
         Ok(Layer {
             W: parameters.0,
@@ -58,8 +59,8 @@ impl Layer {
             Z: Array::zeros((0, output_dim)),
             A: Array::zeros((0, output_dim)),
             activation: Activation::default(),
-            dW: Array::zeros((0,0)),
-            dB: Array::zeros((0, 0)),
+            dW: Array::zeros((output_dim, input_dim)),
+            dB: Array::zeros((output_dim, 1)),
         })
     }
 
@@ -153,9 +154,9 @@ impl NeuralNetworkBuilder {
         // dz is the error in the layers Z value - sometimes also denoted as delta
         let mut dz = &self.layers[num_layers - 1].activation.derivative(&self.layers[num_layers - 1].Z) * 
             loss.derivative(&self.layers[num_layers - 1].A, &target);
+        let mut halt = false;
 
         for n in (0..num_layers).rev() {
-            // println!("Optimizing Layer {}", n);
             let nth_layer = &self.layers[n];
 
             // determine the vector that is fed into the nth layer
@@ -172,15 +173,15 @@ impl NeuralNetworkBuilder {
             }
             
             let dw = &dz.dot(&nth_layer_input.to_owned().reversed_axes());
-            let db = (&dz.sum_axis(Axis(1))).to_shape((dz.nrows(), 1)).unwrap().to_owned(); // need to add an extra dim
+            let db = &dz;
 
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + (1. - self.momentum) * dw;
-            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + (1. - self.momentum) * db;
+            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + self.lr * dw;
+            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + self.lr * db;
         }
         for layer in &mut self.layers {
-            layer.W = &layer.W - &layer.dW * self.lr;
-            layer.B = &layer.B - &layer.dB * self.lr;
+            layer.W = &layer.W + &layer.dW;
+            layer.B = &layer.B + &layer.dB;
         }
     }
 }
