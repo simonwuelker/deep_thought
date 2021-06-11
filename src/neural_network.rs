@@ -1,21 +1,19 @@
+use crate::{activation::Activation, error::Error, loss::Loss};
 use anyhow::Result;
 use ndarray::prelude::*;
-use crate::{
-    error::Error,
-    loss::Loss,
-    activation::Activation,
-};
-use ndarray_rand::{
-    RandomExt,
-    rand_distr::Normal,
-};
+use ndarray_rand::{rand_distr::Normal, RandomExt};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NeuralNetworkBuilder {
     pub layers: Vec<Layer>,
     lr: f64,
     momentum: f64,
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[allow(non_snake_case)] // non snake case kinda makes sense with matrices
 pub struct Layer {
     /// Weight matrix
@@ -73,16 +71,17 @@ impl Layer {
     pub fn set_parameters(&mut self, parameters: (Array2<f64>, Array2<f64>)) -> Result<()> {
         // make sure the dimensions match before replacing the old ones
         if self.W.raw_dim() != parameters.0.raw_dim() {
-            return Err(Error::MismatchedDimensions{
-                expected: self.W.raw_dim().into_dyn(), 
+            return Err(Error::MismatchedDimensions {
+                expected: self.W.raw_dim().into_dyn(),
                 found: parameters.0.raw_dim().into_dyn(),
-            }.into());
-        }
-        else if self.B.raw_dim() != parameters.1.raw_dim() {
-            return Err(Error::MismatchedDimensions{
+            }
+            .into());
+        } else if self.B.raw_dim() != parameters.1.raw_dim() {
+            return Err(Error::MismatchedDimensions {
                 expected: self.B.raw_dim().into_dyn(),
                 found: parameters.1.raw_dim().into_dyn(),
-            }.into())
+            }
+            .into());
         }
 
         self.W = parameters.0;
@@ -121,14 +120,18 @@ impl NeuralNetworkBuilder {
 
     /// manually set the learning rate, default is 0.01
     pub fn learning_rate(mut self, lr: f64) -> NeuralNetworkBuilder {
-        if lr < 0. { panic!("learning rate must be >= 0, got {}", lr); }
+        if lr < 0. {
+            panic!("learning rate must be >= 0, got {}", lr);
+        }
         self.lr = lr;
         self
     }
 
     /// set the momentum for gradient descent
     pub fn momentum(mut self, momentum: f64) -> NeuralNetworkBuilder {
-        if momentum < 0. { panic!("momentum must be >= 0, got {}", momentum); }
+        if momentum < 0. {
+            panic!("momentum must be >= 0, got {}", momentum);
+        }
         self.momentum = momentum;
         self
     }
@@ -146,31 +149,33 @@ impl NeuralNetworkBuilder {
         self.layers.iter().last().unwrap().A.clone()
     }
 
-    /// Backpropagate the output through the network and adjust weights/biases to further match the 
+    /// Backpropagate the output through the network and adjust weights/biases to further match the
     /// desired target
     pub fn backprop(&mut self, input: Array2<f64>, target: Array2<f64>, loss: &Loss) {
         let num_layers = self.layers.len();
         // Initial dz for the last layer
         // dz is the error in the layers Z value - sometimes also denoted as delta
-        let mut dz = &self.layers[num_layers - 1].activation.derivative(&self.layers[num_layers - 1].Z) * 
-            loss.derivative(&self.layers[num_layers - 1].A, &target);
+        let mut dz = &self.layers[num_layers - 1]
+            .activation
+            .derivative(&self.layers[num_layers - 1].Z)
+            * loss.derivative(&self.layers[num_layers - 1].A, &target);
 
         for n in (0..num_layers).rev() {
             let nth_layer = &self.layers[n];
 
             // determine the vector that is fed into the nth layer
             let nth_layer_input = if n == 0 {
-               &input 
+                &input
             } else {
                 &self.layers[n - 1].A
             };
 
             // find the derivative of the cost function with respect to the nth layers Z value
             if n != num_layers - 1 {
-                dz = &self.layers[n + 1].W.to_owned().reversed_axes().dot(&dz) *
-                    nth_layer.activation.derivative(&nth_layer.Z);
+                dz = &self.layers[n + 1].W.to_owned().reversed_axes().dot(&dz)
+                    * nth_layer.activation.derivative(&nth_layer.Z);
             }
-            
+
             let dw = &dz.dot(&nth_layer_input.to_owned().reversed_axes());
             let db = &dz;
 
@@ -184,4 +189,3 @@ impl NeuralNetworkBuilder {
         }
     }
 }
-

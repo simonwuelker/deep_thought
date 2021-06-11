@@ -1,6 +1,1 @@
-pub use crate::{
-    neural_network::*,
-    loss::*,
-    activation::*,
-    dataset::*,
-};
+pub use crate::{activation::*, dataset::*, loss::*, neural_network::*};

@@ -1,10 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rust_nn::neural_network::{NeuralNetworkBuilder, Layer};
 use ndarray::Array2;
-use ndarray_rand::{
-    RandomExt,
-    rand_distr::Uniform,
-};
+use ndarray_rand::{rand_distr::Uniform, RandomExt};
+use rust_nn::neural_network::{Layer, NeuralNetworkBuilder};
 
 fn criterion_benchmark(c: &mut Criterion) {
     // Build the neural net

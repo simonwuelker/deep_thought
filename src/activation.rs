@@ -1,9 +1,13 @@
 use ndarray::prelude::*;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Possible activation functions to apply on a Layer's Z value
 /// Each Activation function must be continuous and differentiable
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Activation {
-    /// values < 0 become 0 
+    /// values < 0 become 0
     ReLU,
     /// no changes, f(x) = x
     Linear,
@@ -29,7 +33,9 @@ impl Activation {
         match &self {
             Activation::ReLU => inp.map(|&x| if x > 0. { 1. } else { 0. }),
             Activation::Linear => Array2::ones(inp.dim()),
-            Activation::Sigmoid => self.compute(inp) * (Array::<f64, _>::ones(inp.raw_dim()) - self.compute(inp)),
+            Activation::Sigmoid => {
+                self.compute(inp) * (Array::<f64, _>::ones(inp.raw_dim()) - self.compute(inp))
+            }
             Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { 1. } else { *slope }),
         }
     }

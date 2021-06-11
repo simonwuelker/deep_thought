@@ -1,12 +1,12 @@
 use anyhow::Result;
-use serde::Deserialize;
-use ndarray::prelude::*;
-use rust_nn::{
+use deep_thought::{
     activation::Activation,
-    neural_network::{Layer, NeuralNetworkBuilder},
+    dataset::{BatchSize, Dataset},
     loss::Loss,
-    dataset::{Dataset, BatchSize},
+    neural_network::{Layer, NeuralNetworkBuilder},
 };
+use ndarray::prelude::*;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct HeartFailureRecord {
@@ -25,7 +25,7 @@ struct HeartFailureRecord {
     death_event: f64,
 }
 
-fn main() -> Result<()>{
+fn main() -> Result<()> {
     // Dataset from https://www.kaggle.com/andrewmvd/heart-failure-clinical-data
     let mut rdr = csv::Reader::from_path("datasets/heart_failure_clinical_records_dataset.csv")?;
 
@@ -34,9 +34,21 @@ fn main() -> Result<()>{
 
     for result in rdr.deserialize() {
         let r: HeartFailureRecord = result?;
-        
-        records.push_row(ArrayView::from(&vec![r.age, r.anaemia, r.creatinine_phosphokinase, r.diabetes, r.ejection_fraction,
-            r.high_blood_pressure, r.platelets, r.serum_creatinine, r.serum_sodium, r.sex, r.smoking, r.time]))?;
+
+        records.push_row(ArrayView::from(&vec![
+            r.age,
+            r.anaemia,
+            r.creatinine_phosphokinase,
+            r.diabetes,
+            r.ejection_fraction,
+            r.high_blood_pressure,
+            r.platelets,
+            r.serum_creatinine,
+            r.serum_sodium,
+            r.sex,
+            r.smoking,
+            r.time,
+        ]))?;
         labels.push_row(ArrayView::from(&vec![r.death_event]))?;
     }
 
@@ -45,30 +57,31 @@ fn main() -> Result<()>{
     // Build the neural net
     let mut net = NeuralNetworkBuilder::new()
         .learning_rate(0.01)
+        .momentum(0.1)
         .add_layer(Layer::new(12, 20))
         .add_layer(Layer::new(20, 10))
         .add_layer(Layer::new(10, 5))
-        .add_layer(Layer::new(5, 1));//.activation(Activation::Sigmoid));
+        .add_layer(Layer::new(5, 1).activation(Activation::Sigmoid));
+
+    let loss_fn = Loss::MSE;
 
     // train the network
-    for epoch in 0..1 {
+    for epoch in 0..10000 {
         println!("training epoch {}", epoch);
         for (samples, labels) in dataset.iter_train().into_iter().take(5) {
             let _out = net.forward(&samples);
-            println!("{}", _out);
-            net.backprop(samples, labels, Loss::MSE);
+            net.backprop(samples, labels, &loss_fn);
         }
     }
 
-    // evaluate the net 
-    // let mut total_loss: f64 = 0.;
-    // let loss = Loss::MSE;
-    // for (sample, label) in dataset.iter_test() {
-    //     let out = net.forward(&sample);
-    //     println!("{} should be {}", &out, &label);
-    //     total_loss += loss.compute(&out, &label);
-    // }
+    // evaluate the net
+    let mut total_loss: f64 = 0.;
+    for (sample, label) in dataset.iter_test() {
+        let out = net.forward(&sample);
+        println!("{} should be {}", &out, &label);
+        total_loss += loss_fn.compute(&out, &label).sum();
+    }
 
-    // println!("Mean loss over 100 test samples: {}", total_loss / 100.);
+    println!("Mean loss over 100 test samples: {}", total_loss / 100.);
     Ok(())
 }

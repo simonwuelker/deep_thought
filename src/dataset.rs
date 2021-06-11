@@ -1,6 +1,6 @@
+use crate::error::Error;
 use anyhow::Result;
 use ndarray::prelude::*;
-use crate::error::Error;
 
 /// Number of training examples to run before optimizing the net once.
 /// If the number of examples does not fit evenly,
@@ -32,15 +32,20 @@ pub struct Dataset {
 impl Dataset {
     /// Create a new dataset from the given data. Data is split into training and testing data based on the train_test_split argument.
     /// All Samples and labels are normalized by column, meaning that the mean across a column is always approximately 1
-    pub fn new(records: Array2<f64>, labels: Array2<f64>, train_test_split: f64, batch_size: BatchSize) -> Result<Dataset> {
+    pub fn new(
+        records: Array2<f64>,
+        labels: Array2<f64>,
+        train_test_split: f64,
+        batch_size: BatchSize,
+    ) -> Result<Dataset> {
         let record_means = records.mean_axis(Axis(0)).ok_or(Error::NoData)?;
         let label_means = labels.mean_axis(Axis(0)).ok_or(Error::NoData)?;
-        
+
         // normalization temporarily turned off because debug
         Ok(Dataset {
             train_test_split: train_test_split,
             records: records, // / &record_means,
-            labels: labels, // / &label_means,
+            labels: labels,   // / &label_means,
             record_means: record_means,
             label_means: label_means,
             batch_size: batch_size,
@@ -66,7 +71,7 @@ impl Dataset {
             BatchSize::All => num_train,
             BatchSize::Number(num) => num,
         };
-        
+
         SampleIterator {
             index: 0,
             num_batches: num_train.div_euclid(batch_size),
@@ -113,12 +118,26 @@ impl Iterator for SampleIterator {
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.num_batches {
             None
-        }
-        else {
-            let batched_samples = self.samples.slice(s![self.index * self.batch_size..(self.index + 1) * self.batch_size, ..]).to_owned();
-            let batched_labels = self.labels.slice(s![self.index * self.batch_size..(self.index + 1) * self.batch_size, ..]).to_owned();
+        } else {
+            let batched_samples = self
+                .samples
+                .slice(s![
+                    self.index * self.batch_size..(self.index + 1) * self.batch_size,
+                    ..
+                ])
+                .to_owned();
+            let batched_labels = self
+                .labels
+                .slice(s![
+                    self.index * self.batch_size..(self.index + 1) * self.batch_size,
+                    ..
+                ])
+                .to_owned();
             self.index += 1;
-            Some((batched_samples.reversed_axes(), batched_labels.reversed_axes()))
+            Some((
+                batched_samples.reversed_axes(),
+                batched_labels.reversed_axes(),
+            ))
         }
     }
 }
@@ -129,7 +148,7 @@ impl Iterator for SampleIterator {
 //     samples: ArrayView<'a, f64, Dim<[usize; 2]>>,
 //     labels: ArrayView<'a, f64, Dim<[usize; 2]>>
 // }
-// 
+//
 // impl<'a> Iterator for SampleIterator<'a> {
 //     type Item = (ArrayView<'a, f64, Dim<[usize; 2]>>, ArrayView<'a, f64, Dim<[usize; 2]>>);
 //     fn next(&mut self) -> Option<(ArrayView<'a, f64, Dim<[usize; 2]>>, ArrayView<'a, f64, Dim<[usize; 2]>>)> {
