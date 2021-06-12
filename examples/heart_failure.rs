@@ -1,9 +1,10 @@
 use anyhow::Result;
 use deep_thought::{
+    optimizer::{Optimizer, SGD},
     activation::Activation,
     dataset::{BatchSize, Dataset},
     loss::Loss,
-    neural_network::{Layer, NeuralNetworkBuilder},
+    neural_network::{Layer, NeuralNetwork},
 };
 use ndarray::prelude::*;
 use serde::Deserialize;
@@ -55,13 +56,15 @@ fn main() -> Result<()> {
     let dataset = Dataset::new(records, labels, 0.8, BatchSize::Number(2))?;
 
     // Build the neural net
-    let mut net = NeuralNetworkBuilder::new()
-        .learning_rate(0.01)
-        .momentum(0.1)
+    let mut net = NeuralNetwork::new()
         .add_layer(Layer::new(12, 20))
         .add_layer(Layer::new(20, 10))
         .add_layer(Layer::new(10, 5))
         .add_layer(Layer::new(5, 1).activation(Activation::Sigmoid));
+
+    let mut optimizer = SGD::new(&net)
+        .learning_rate(0.01)
+        .momentum(0.1);
 
     let loss_fn = Loss::MSE;
 
@@ -70,7 +73,7 @@ fn main() -> Result<()> {
         println!("training epoch {}", epoch);
         for (samples, labels) in dataset.iter_train().into_iter().take(5) {
             let _out = net.forward(&samples);
-            net.backprop(samples, labels, &loss_fn);
+            net.backprop(samples, labels, &loss_fn, &mut optimizer);
         }
     }
 

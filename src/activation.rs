@@ -15,6 +15,8 @@ pub enum Activation {
     Sigmoid,
     /// Values < 0 get scaled down by a lot. Similar to ReLU except gradients don't become 0. LeakyReLu(0) = ReLU
     LeakyReLU(f64),
+    /// Sum of all output values is 1. Useful for getting a probability distribution over the action space
+    Softmax,
 }
 
 impl Activation {
@@ -25,6 +27,11 @@ impl Activation {
             Activation::Linear => inp.clone(),
             Activation::Sigmoid => inp.map(|x| 1. / (1. + (-x).exp())),
             Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
+            Activation::Softmax => {
+                let tmp = inp.map(|x| x.exp());
+                let sum = tmp.sum();
+                tmp / sum
+            }
         }
     }
 
@@ -37,6 +44,10 @@ impl Activation {
                 self.compute(inp) * (Array::<f64, _>::ones(inp.raw_dim()) - self.compute(inp))
             }
             Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { 1. } else { *slope }),
+            Activation::Softmax => {
+                let sum = inp.map(|x| x.exp()).sum();
+                unimplemented!();
+            }
         }
     }
 }

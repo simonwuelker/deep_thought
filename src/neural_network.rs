@@ -1,4 +1,4 @@
-use crate::{activation::Activation, error::Error, loss::Loss};
+use crate::{activation::Activation, error::Error, loss::Loss, optimizer::Optimizer};
 use anyhow::Result;
 use ndarray::prelude::*;
 use ndarray_rand::{rand_distr::Normal, RandomExt};
@@ -7,10 +7,8 @@ use ndarray_rand::{rand_distr::Normal, RandomExt};
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct NeuralNetworkBuilder {
+pub struct NeuralNetwork {
     pub layers: Vec<Layer>,
-    lr: f64,
-    momentum: f64,
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -20,16 +18,16 @@ pub struct Layer {
     pub W: Array2<f64>,
     /// Bias vector
     pub B: Array2<f64>,
+    /// Accumulated weight gradients
+    pub dW: Array2<f64>,
+    /// Accumulated bias gradients
+    pub dB: Array2<f64>,
     /// Activation function which turns self.Z into self.A
     activation: Activation,
     /// inp * weight  + bias
     Z: Array2<f64>,
     /// Activation(Z), the actual activation of the neurons
     A: Array2<f64>,
-    /// Accumulated weight gradients
-    dW: Array2<f64>,
-    /// Accumulated bias gradients
-    dB: Array2<f64>,
 }
 
 impl Layer {
@@ -103,36 +101,14 @@ impl Layer {
     }
 }
 
-impl NeuralNetworkBuilder {
-    pub fn new() -> NeuralNetworkBuilder {
-        NeuralNetworkBuilder {
-            layers: vec![],
-            lr: 0.01,
-            momentum: 0.,
-        }
+impl NeuralNetwork {
+    pub fn new() -> NeuralNetwork {
+        NeuralNetwork { layers: vec![] }
     }
 
     /// add a hidden layer to the network
-    pub fn add_layer(mut self, layer: Layer) -> NeuralNetworkBuilder {
+    pub fn add_layer(mut self, layer: Layer) -> NeuralNetwork {
         self.layers.push(layer);
-        self
-    }
-
-    /// manually set the learning rate, default is 0.01
-    pub fn learning_rate(mut self, lr: f64) -> NeuralNetworkBuilder {
-        if lr < 0. {
-            panic!("learning rate must be >= 0, got {}", lr);
-        }
-        self.lr = lr;
-        self
-    }
-
-    /// set the momentum for gradient descent
-    pub fn momentum(mut self, momentum: f64) -> NeuralNetworkBuilder {
-        if momentum < 0. {
-            panic!("momentum must be >= 0, got {}", momentum);
-        }
-        self.momentum = momentum;
         self
     }
 
@@ -151,7 +127,15 @@ impl NeuralNetworkBuilder {
 
     /// Backpropagate the output through the network and adjust weights/biases to further match the
     /// desired target
-    pub fn backprop(&mut self, input: Array2<f64>, target: Array2<f64>, loss: &Loss) {
+    pub fn backprop<O>(
+        &mut self,
+        input: Array2<f64>,
+        target: Array2<f64>,
+        loss: &Loss,
+        optimizer: &mut O,
+    ) where
+        O: Optimizer,
+    {
         let num_layers = self.layers.len();
         // Initial dz for the last layer
         // dz is the error in the layers Z value - sometimes also denoted as delta
@@ -165,9 +149,9 @@ impl NeuralNetworkBuilder {
 
             // determine the vector that is fed into the nth layer
             let nth_layer_input = if n == 0 {
-                &input
+                input.clone()
             } else {
-                &self.layers[n - 1].A
+                self.layers[n - 1].A.clone()
             };
 
             // find the derivative of the cost function with respect to the nth layers Z value
@@ -176,16 +160,12 @@ impl NeuralNetworkBuilder {
                     * nth_layer.activation.derivative(&nth_layer.Z);
             }
 
-            let dw = &dz.dot(&nth_layer_input.to_owned().reversed_axes());
-            let db = &dz;
-
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.dW = self.momentum * &nth_layer_mut.dW + self.lr * dw;
-            nth_layer_mut.dB = self.momentum * &nth_layer_mut.dB + self.lr * db;
+            nth_layer_mut.dW = dz.dot(&nth_layer_input.reversed_axes());
+            nth_layer_mut.dB = dz.clone();
         }
-        for layer in &mut self.layers {
-            layer.W = &layer.W + &layer.dW;
-            layer.B = &layer.B + &layer.dB;
-        }
+
+        // Actually optimize the network
+        optimizer.step(self);
     }
 }

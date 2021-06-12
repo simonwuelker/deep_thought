@@ -1,9 +1,10 @@
 use anyhow::Result;
 use deep_thought::{
+    optimizer::{Optimizer, SGD},
     activation::Activation,
     dataset::{BatchSize, Dataset},
     loss::Loss,
-    neural_network::{Layer, NeuralNetworkBuilder},
+    neural_network::{Layer, NeuralNetwork},
 };
 use ndarray::prelude::*;
 
@@ -16,16 +17,16 @@ fn main() -> Result<()> {
     let loss_fn = Loss::MSE;
 
     // Build the neural net
-    let mut net = NeuralNetworkBuilder::new()
-        .learning_rate(0.3)
-        .momentum(0.1)
+    let mut net = NeuralNetwork::new()
         .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid));
 
+    let mut optim = SGD::new(&net).learning_rate(0.3).momentum(0.1);
+
     // train the network
     for epoch in 0..11000 {
-        for (samples, labels) in dataset.iter_train().into_iter() {
+        for (samples, labels) in dataset.iter_train() {
             let _out = net.forward(&samples);
             if epoch % 100 == 0 {
                 println!("training epoch {}", epoch);
@@ -34,7 +35,7 @@ fn main() -> Result<()> {
                     &loss_fn.compute(&_out, &labels).mean().unwrap()
                 );
             }
-            net.backprop(samples, labels, &loss_fn);
+            net.backprop(samples, labels, &loss_fn, &mut optim);
         }
     }
 
