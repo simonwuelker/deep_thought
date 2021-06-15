@@ -7,12 +7,14 @@ use ndarray_rand::{rand_distr::Normal, RandomExt};
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// A Neural Network consisting of a an input/output and any number of additional hidden [`Layer`]s
 pub struct NeuralNetwork {
     pub layers: Vec<Layer>,
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[allow(non_snake_case)] // non snake case kinda makes sense with matrices
+/// A single neuron layer with an associated [`Activation`] function
 pub struct Layer {
     /// Weight matrix
     pub W: Array2<f64>,
@@ -31,7 +33,8 @@ pub struct Layer {
 }
 
 impl Layer {
-    /// construct a new layer with provided dimensions and random weights/biases
+    /// construct a new layer with provided dimensions. Weights are initialized using [Glorot/Xavier Initialization](http://proceedings.mlr.press/v9/glorot10a.html)
+    /// Biases are always intialized to zeros
     pub fn new(input_dim: usize, output_dim: usize) -> Layer {
         let std = (2. / (input_dim + output_dim) as f64).sqrt();
         Layer {
@@ -127,6 +130,7 @@ impl NeuralNetwork {
 
     /// Backpropagate the output through the network and adjust weights/biases to further match the
     /// desired target
+    /// Input has shape (in_size, num_batches)
     pub fn backprop<O>(
         &mut self,
         input: Array2<f64>,
@@ -139,10 +143,10 @@ impl NeuralNetwork {
         let num_layers = self.layers.len();
         // Initial dz for the last layer
         // dz is the error in the layers Z value - sometimes also denoted as delta
-        let mut dz = &self.layers[num_layers - 1]
+        let mut dz = (&self.layers[num_layers - 1]
             .activation
             .derivative(&self.layers[num_layers - 1].Z)
-            * loss.derivative(&self.layers[num_layers - 1].A, &target);
+            * loss.derivative(&self.layers[num_layers - 1].A, &target)).sum_axis(Axis(1));
 
         for n in (0..num_layers).rev() {
             let nth_layer = &self.layers[n];
@@ -156,12 +160,13 @@ impl NeuralNetwork {
 
             // find the derivative of the cost function with respect to the nth layers Z value
             if n != num_layers - 1 {
-                dz = &self.layers[n + 1].W.to_owned().reversed_axes().dot(&dz)
-                    * nth_layer.activation.derivative(&nth_layer.Z);
+                // this might be wrong
+                dz = (&self.layers[n + 1].W.t().dot(&dz)
+                    * nth_layer.activation.derivative(&nth_layer.Z)).sum_axis(Axis(1));
             }
 
             let nth_layer_mut = &mut self.layers[n];
-            nth_layer_mut.dW = dz.dot(&nth_layer_input.reversed_axes());
+            nth_layer_mut.dW = dz.dot(&nth_layer_input.t());
             nth_layer_mut.dB = dz.clone();
         }
 

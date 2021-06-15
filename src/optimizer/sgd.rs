@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use ndarray::prelude::*;
+use crate::optimizer::Optimizer;
 
 /// Implements stochastic gradient descent (optionally with momentum)
 pub struct SGD {

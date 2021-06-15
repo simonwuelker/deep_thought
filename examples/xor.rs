@@ -1,11 +1,6 @@
 use anyhow::Result;
-use deep_thought::{
-    optimizer::{Optimizer, SGD},
-    activation::Activation,
-    dataset::{BatchSize, Dataset},
-    loss::Loss,
-    neural_network::{Layer, NeuralNetwork},
-};
+use deep_thought::prelude::*;
+use deep_thought::optimizer::Optimizer;
 use ndarray::prelude::*;
 
 fn main() -> Result<()> {
@@ -13,7 +8,7 @@ fn main() -> Result<()> {
     let inputs = array![[0., 0.], [0., 1.], [1., 0.], [1., 1.],];
     let labels = array![[0.], [1.], [1.], [0.]];
 
-    let dataset = Dataset::new(inputs, labels, 1., BatchSize::One)?;
+    let dataset = Dataset::raw(inputs, labels, 1., BatchSize::One)?;
     let loss_fn = Loss::MSE;
 
     // Build the neural net
@@ -22,7 +17,7 @@ fn main() -> Result<()> {
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid));
 
-    let mut optim = SGD::new(&net).learning_rate(0.3).momentum(0.1);
+    let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.1);
 
     // train the network
     for epoch in 0..11000 {

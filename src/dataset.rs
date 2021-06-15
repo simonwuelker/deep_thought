@@ -44,10 +44,28 @@ impl Dataset {
         // normalization temporarily turned off because debug
         Ok(Dataset {
             train_test_split: train_test_split,
-            records: records, // / &record_means,
-            labels: labels,   // / &label_means,
+            records: records / &record_means,
+            labels: labels / &label_means,
             record_means: record_means,
             label_means: label_means,
+            batch_size: batch_size,
+        })
+    }
+
+    /// Create a new dataset from a given data. Data is split into training and testing data based on the `train_test_split`
+    /// argument. Data is not normalized.
+    pub fn raw(
+        records: Array2<f64>,
+        labels: Array2<f64>,
+        train_test_split: f64,
+        batch_size: BatchSize,
+    ) -> Result<Dataset> {
+        Ok(Dataset {
+            train_test_split: train_test_split,
+            record_means: Array1::ones(records.ncols()),
+            label_means: Array1::ones(labels.ncols()),
+            records: records,
+            labels: labels,
             batch_size: batch_size,
         })
     }

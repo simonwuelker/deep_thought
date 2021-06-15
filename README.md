@@ -67,6 +67,12 @@ For more usage examples, please take a look at [/examples](https://github.com/Wu
 * Add decreasing learning rate (probably also easy)
 * add CNN's
 
+# Find a array crate which satisfies the following conditions:
+* Support basic stuff like max and argmax. I don't care that `f64` doesn't implement `Ord`
+* easier api than `ndarray`
+* basically numpy but in rust and would be nice if gpu (:
+    
+
 ## Additional Ressources
 Some stuff i found to be quite helpful if you are interested in understanding the math behind neural networks
 * [Very nice article by Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap2.html)

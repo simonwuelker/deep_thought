@@ -16,7 +16,7 @@
 //!    let loss_fn = Loss::MSE;
 //!
 //!    // Build the neural net
-//!    let mut net = NeuralNetworkBuilder::new()
+//!    let mut net = NeuralNetwork::new()
 //!        .learning_rate(0.3)
 //!        .momentum(0.1)
 //!        .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
@@ -53,17 +53,25 @@
 //! Feature Flags
 // #![feature(test)]
 
+/// Activation functions
 pub mod activation;
+/// Dataset object which is used to split and normalize data
 pub mod dataset;
+/// Common errors
 pub mod error;
+/// Loss functions
 pub mod loss;
+/// Neural networks, Layers and math
 pub mod neural_network;
+/// Contains various different Types of optimizers
 pub mod optimizer;
+/// Common imports
 pub mod prelude;
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
+    use crate::optimizer::Optimizer;
     use anyhow::Result;
     use ndarray::prelude::*;
     use ndarray_rand::rand_distr::Uniform;
@@ -71,10 +79,12 @@ mod tests {
 
     #[test]
     fn simple_net_test() {
-        let mut net = NeuralNetworkBuilder::new()
-            .learning_rate(0.05)
+        let mut net = NeuralNetwork::new()
             .add_layer(Layer::new(1, 1))
             .add_layer(Layer::new(1, 1));
+
+        let mut optim = optimizer::SGD::new(&net)
+            .learning_rate(0.05);
 
         let inp = array![[0.6]];
         let target = array![[0.3]];
@@ -84,10 +94,9 @@ mod tests {
             let out = net.forward(&inp);
             last_loss = Loss::MSE.compute(&out, &target).mean().unwrap();
             println!("In: {} Out: {} Loss: {}", &inp, &out, &last_loss);
-            net.backprop(inp.clone(), target.clone(), &Loss::MSE);
+            net.backprop(inp.clone(), target.clone(), &Loss::MSE, &mut optim);
         }
         assert!(last_loss < 0.001);
-        assert!(false);
     }
 
     #[test]
@@ -102,9 +111,19 @@ mod tests {
 
             let denormalized_sample = &dataset.denormalize_records(sample_norm);
             let denormalized_label = &dataset.denormalize_labels(label_norm);
+            println!("{} == {}", target_sample, denormalized_sample);
             assert!(target_sample.abs_diff_eq(denormalized_sample, 0.01));
             assert!(target_label.abs_diff_eq(denormalized_label, 0.01));
         }
         Ok(())
+    }
+
+    #[test]
+    fn activations() {
+        let tanh = Activation::Tanh;
+        let inp = array![[-1.], [0.], [1.]];
+        println!("out: {}", tanh.compute(&inp));
+        println!("der: {}", tanh.derivative(&inp));
+        assert!(false);
     }
 }
