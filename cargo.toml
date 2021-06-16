@@ -29,6 +29,7 @@ thiserror = "1"
 ndarray = { version = "0.15", features = ['approx', 'serde'] }
 ndarray-rand = "0.14"
 serde = { version = "1", features = ['derive'], optional = true}
+num-traits = "0.2"
 
 [[bench]]
 name = "forward_prop"

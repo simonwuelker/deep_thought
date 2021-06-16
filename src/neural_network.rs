@@ -1,7 +1,8 @@
 use crate::{activation::Activation, error::Error, loss::Loss, optimizer::Optimizer};
 use anyhow::Result;
 use ndarray::prelude::*;
-use ndarray_rand::{rand_distr::Normal, RandomExt};
+use ndarray_rand::{RandomExt, rand_distr::Normal};
+// use rand_distr::{Normal, Distribution};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -37,8 +38,10 @@ impl Layer {
     /// Biases are always intialized to zeros
     pub fn new(input_dim: usize, output_dim: usize) -> Layer {
         let std = (2. / (input_dim + output_dim) as f64).sqrt();
+        // let normal = Normal::new(2., std).unwrap();
         Layer {
             W: Array::random((output_dim, input_dim), Normal::new(0., std).unwrap()),
+            // W: Array::from_shape_simple_fn((output_dim, input_dim), || Dual::variable(normal.sample
             B: Array::zeros((output_dim, 1)),
             activation: Activation::default(),
             Z: Array::zeros((0, output_dim)),
@@ -102,11 +105,21 @@ impl Layer {
         self.Z = self.W.dot(inp) + &self.B;
         self.A = self.activation.compute(&self.Z);
     }
+
+    /// Get the number of tunable parameters in this layer
+    pub fn num_parameters(&self) -> usize {
+        self.W.len() + self.B.len()
+    }
 }
 
 impl NeuralNetwork {
     pub fn new() -> NeuralNetwork {
         NeuralNetwork { layers: vec![] }
+    }
+
+    /// Get the number of tunable parameters inside the network
+    pub fn num_parameters(&self) -> usize {
+        self.layers.iter().map(|x| x.num_parameters()).sum()
     }
 
     /// add a hidden layer to the network

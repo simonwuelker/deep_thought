@@ -58,6 +58,9 @@ fn main() -> Result<()>{
 ```
 For more usage examples, please take a look at [/examples](https://github.com/Wuelle/rust_nn/tree/main/examples)
 
+## Nightly Usage
+Deep_thought makes use of the `array_map` and `array_zip` features, which are not available on the stable release channel yet.
+
 ## Features
 * Linear Layers
 * Common Activation functions like ReLU or Sigmoid
@@ -76,3 +79,7 @@ For more usage examples, please take a look at [/examples](https://github.com/Wu
 ## Additional Ressources
 Some stuff i found to be quite helpful if you are interested in understanding the math behind neural networks
 * [Very nice article by Michael Nielsen](http://neuralnetworksanddeeplearning.com/chap2.html)
+
+## Major Problems with dual numbers
+* I need to know the number of parameters before initializing them
+* Every number needs an index (CAN BE DONE USING A ITERATOR)

@@ -1,3 +1,5 @@
+#![feature(array_map, array_zip)]
+
 //! This crate implements basic feedforward-neural Networks in rust.
 //!
 //! A basix XOR training example might look like this:
@@ -50,8 +52,6 @@
 //!    Ok(())
 //! }
 //! ```
-//! Feature Flags
-// #![feature(test)]
 
 /// Activation functions
 pub mod activation;
@@ -67,12 +67,16 @@ pub mod neural_network;
 pub mod optimizer;
 /// Common imports
 pub mod prelude;
+/// Automatic tensor differentiation
+pub mod autograd;
 
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
+    use crate::autograd::Dual;
     use crate::optimizer::Optimizer;
     use anyhow::Result;
+    use num_traits::Pow;
     use ndarray::prelude::*;
     use ndarray_rand::rand_distr::Uniform;
     use ndarray_rand::RandomExt;
@@ -119,11 +123,11 @@ mod tests {
     }
 
     #[test]
-    fn activations() {
-        let tanh = Activation::Tanh;
-        let inp = array![[-1.], [0.], [1.]];
-        println!("out: {}", tanh.compute(&inp));
-        println!("der: {}", tanh.derivative(&inp));
-        assert!(false);
+    fn autograd() {
+        // derivative of f(x) = 3x + 1 for x = 5
+        let x: Dual<f64, 1> = Dual::variable(5., 0);
+        let res = Dual::constant(3.) * x + Dual::constant(1.);
+        assert_eq!(res.val, 16.);
+        assert_eq!(res.e, [3.]);
     }
 }
