@@ -15,9 +15,10 @@ fn main() -> Result<()> {
     let mut net = NeuralNetwork::new()
         .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
-        .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid));
+        .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid))
+        .build();
 
-    let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.1);
+    // let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.1);
 
     // train the network
     for epoch in 0..11000 {
@@ -30,7 +31,6 @@ fn main() -> Result<()> {
                     &loss_fn.compute(&_out, &labels).mean().unwrap()
                 );
             }
-            net.backprop(samples, labels, &loss_fn, &mut optim);
         }
     }
 
