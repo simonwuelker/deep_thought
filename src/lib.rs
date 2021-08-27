@@ -1,4 +1,4 @@
-#![feature(array_map, array_zip)]
+#![feature(array_zip)]
 
 //! This crate implements basic feedforward-neural Networks in rust.
 //!
@@ -37,7 +37,7 @@
 //!        }
 //!    }
 //!    
-//!    // evaluate the net 
+//!    // evaluate the net
 //!    let mut total_loss: f64 = 0.;
 //!    // should ofc be iter_test but this dataset is kinda minimalistic
 //!    let test_iter = dataset.iter_train();
@@ -55,6 +55,8 @@
 
 /// Activation functions
 pub mod activation;
+/// Automatic tensor differentiation
+pub mod autograd;
 /// Dataset object which is used to split and normalize data
 pub mod dataset;
 /// Common errors
@@ -67,19 +69,17 @@ pub mod neural_network;
 pub mod optimizer;
 /// Common imports
 pub mod prelude;
-/// Automatic tensor differentiation
-pub mod autograd;
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::*;
     use crate::autograd::Dual;
     use crate::optimizer::Optimizer;
+    use crate::prelude::*;
     use anyhow::Result;
-    use num_traits::Pow;
     use ndarray::prelude::*;
     use ndarray_rand::rand_distr::Uniform;
     use ndarray_rand::RandomExt;
+    use num_traits::Pow;
 
     #[test]
     fn simple_net_test() {
@@ -87,8 +87,7 @@ mod tests {
             .add_layer(Layer::new(1, 1))
             .add_layer(Layer::new(1, 1));
 
-        let mut optim = optimizer::SGD::new(&net)
-            .learning_rate(0.05);
+        let mut optim = optimizer::SGD::new(&net).learning_rate(0.05);
 
         let inp = array![[0.6]];
         let target = array![[0.3]];

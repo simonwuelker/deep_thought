@@ -1,10 +1,10 @@
 use anyhow::Result;
 use deep_thought::{
-    optimizer::{Optimizer, SGD},
     activation::Activation,
     dataset::{BatchSize, Dataset},
     loss::Loss,
     neural_network::{Layer, NeuralNetwork},
+    optimizer::{Optimizer, SGD},
 };
 use ndarray::prelude::*;
 use serde::Deserialize;
@@ -62,9 +62,7 @@ fn main() -> Result<()> {
         .add_layer(Layer::new(10, 5))
         .add_layer(Layer::new(5, 1).activation(Activation::Sigmoid));
 
-    let mut optimizer = SGD::new(&net)
-        .learning_rate(0.01)
-        .momentum(0.1);
+    let mut optimizer = SGD::new(&net).learning_rate(0.01).momentum(0.1);
 
     let loss_fn = Loss::MSE;
 

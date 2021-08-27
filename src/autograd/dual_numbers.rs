@@ -1,37 +1,19 @@
-use std::fmt::{self, Debug};
+use num_traits::{pow::Pow, Float};
+use std::fmt;
 use std::ops::*;
-use num_traits::{Float, pow::Pow};
-
-// pub struct DualGenerator<I: Iterator<Item=usize>> {
-//     iter: I,
-// }
-
-// impl Dualgenerator {
-//     pub fn new() -> Self {
-//         Self {
-//             iter: 0..
-//         }
-//     }
-// 
-//     /// return a new variable
-//     pub fn next(&mut self, val: f32) -> Dual {
-//         let e = 
-//         Dual {
-//             val:
-//         }
-//     }
-// }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Dual<F: Float + Debug, const N: usize> {
+pub struct Dual<F: Float + fmt::Debug, const N: usize> {
     pub val: F,
     /// e^2 = 0 but e != 0
     pub e: [F; N],
 }
 
-impl<F, const N: usize> Dual<F, N> where
-    F: Float + Debug,
-    f64: Into<F>, {
+impl<F, const N: usize> Dual<F, N>
+where
+    F: Float + fmt::Debug,
+    f64: Into<F>,
+{
     /// Create a constant dual number, meaning it has a derivative
     /// of zero
     pub fn constant(val: F) -> Self {
@@ -58,7 +40,7 @@ impl<F, const N: usize> Dual<F, N> where
     }
 }
 
-impl<F: Float + Debug, const N: usize> fmt::Display for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> fmt::Display for Dual<F, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut t = f.debug_tuple("Dual number");
         t.field(&self.val);
@@ -69,7 +51,7 @@ impl<F: Float + Debug, const N: usize> fmt::Display for Dual<F, N> {
     }
 }
 
-impl<F: Float + Debug, const N: usize> Add for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> Add for Dual<F, N> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -82,7 +64,7 @@ impl<F: Float + Debug, const N: usize> Add for Dual<F, N> {
     }
 }
 
-impl<F: Float + Debug, const N: usize> Sub for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> Sub for Dual<F, N> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -95,7 +77,7 @@ impl<F: Float + Debug, const N: usize> Sub for Dual<F, N> {
     }
 }
 
-impl<F: Float + Debug, const N: usize> Mul for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> Mul for Dual<F, N> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
@@ -110,7 +92,7 @@ impl<F: Float + Debug, const N: usize> Mul for Dual<F, N> {
     }
 }
 
-impl<F: Float + Debug, const N: usize> Div for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> Div for Dual<F, N> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
@@ -124,33 +106,35 @@ impl<F: Float + Debug, const N: usize> Div for Dual<F, N> {
     }
 }
 
-impl<F: Float + Debug, const N: usize> AddAssign for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> AddAssign for Dual<F, N> {
     fn add_assign(&mut self, other: Self) {
         *self = *self + other;
     }
 }
 
-impl<F: Float + Debug, const N: usize> SubAssign for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> SubAssign for Dual<F, N> {
     fn sub_assign(&mut self, other: Self) {
         *self = *self - other;
     }
 }
 
-impl<F: Float + Debug, const N: usize> MulAssign for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> MulAssign for Dual<F, N> {
     fn mul_assign(&mut self, other: Self) {
         *self = *self * other;
     }
 }
 
-impl<F: Float + Debug, const N: usize> DivAssign for Dual<F, N> {
+impl<F: Float + fmt::Debug, const N: usize> DivAssign for Dual<F, N> {
     fn div_assign(&mut self, other: Self) {
         *self = *self / other;
     }
 }
 
-impl<R: Into<F>, F: Float + Debug, const N: usize> Pow<R> for Dual<F, N> 
-where F: Float + Debug,
-    f64: Into<F> {
+impl<R: Into<F>, F: Float + fmt::Debug, const N: usize> Pow<R> for Dual<F, N>
+where
+    F: Float + fmt::Debug,
+    f64: Into<F>,
+{
     type Output = Self;
 
     fn pow(self, power: R) -> Self {
@@ -162,4 +146,3 @@ where F: Float + Debug,
         }
     }
 }
-

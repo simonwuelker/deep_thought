@@ -43,12 +43,16 @@ impl Activation {
             Activation::Tanh => inp.map(|&x| ((2. * x).exp() - 1.) / ((2. * x).exp() + 1.)),
             Activation::Softmax => {
                 // shift the values by -max(inputs) to prevent overflow (does not affect derivative)
-                let max = inp.iter().max_by(|a, b| 
-                    if a > b {
-                        Ordering::Greater
-                    } else {
-                        Ordering::Less
-                    }).unwrap();
+                let max = inp
+                    .iter()
+                    .max_by(|a, b| {
+                        if a > b {
+                            Ordering::Greater
+                        } else {
+                            Ordering::Less
+                        }
+                    })
+                    .unwrap();
                 let tmp = inp.map(|x| (x - max).exp());
                 let sum = tmp.sum();
                 tmp / sum
@@ -62,12 +66,19 @@ impl Activation {
         match &self {
             Activation::ReLU => array3_from_diags(&inp.map(|&x| if x > 0. { 1. } else { 0. })),
             Activation::Linear => array3_from_diags(&Array2::ones(inp.dim())),
-            Activation::Sigmoid => array3_from_diags(&(self.compute(inp) * (Array::<f64, _>::ones(inp.dim()) - self.compute(inp)))),
-            Activation::LeakyReLU(slope) => array3_from_diags(&inp.map(|&x| if x > 0. { 1. } else { *slope })),
-            Activation::Tanh => array3_from_diags(&(-1. * self.compute(inp) * self.compute(inp) + 1.)),
+            Activation::Sigmoid => array3_from_diags(
+                &(self.compute(inp) * (Array::<f64, _>::ones(inp.dim()) - self.compute(inp))),
+            ),
+            Activation::LeakyReLU(slope) => {
+                array3_from_diags(&inp.map(|&x| if x > 0. { 1. } else { *slope }))
+            }
+            Activation::Tanh => {
+                array3_from_diags(&(-1. * self.compute(inp) * self.compute(inp) + 1.))
+            }
             Activation::Softmax => {
                 let out = self.compute(inp);
-                let mut result: Array3<f64> = Array3::zeros((inp.ncols(), inp.nrows(), inp.nrows()));
+                let mut result: Array3<f64> =
+                    Array3::zeros((inp.ncols(), inp.nrows(), inp.nrows()));
                 // do the computation for every batch seperately
                 for (index, mut matrix) in result.axis_iter_mut(Axis(0)).enumerate() {
                     let s = out.slice(s![.., index]).clone().insert_axis(Axis(1));

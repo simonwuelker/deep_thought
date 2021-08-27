@@ -70,6 +70,11 @@ impl Dataset {
         })
     }
 
+    /// Get the number of entries within the dataset
+    pub fn length(&self) -> usize {
+        self.records.len_of(Axis(0))
+    }
+
     /// Denormalize a batch of record vectors into its original form
     pub fn denormalize_records(&self, normalized: Array2<f64>) -> Array2<f64> {
         normalized * &self.record_means

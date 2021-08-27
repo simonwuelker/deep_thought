@@ -1,11 +1,16 @@
 use anyhow::Result;
-use deep_thought::prelude::*;
 use deep_thought::optimizer::Optimizer;
+use deep_thought::prelude::*;
 use ndarray::prelude::*;
 
 fn main() -> Result<()> {
+    // Network size must be known at compile-time
+    const LAYER1_SIZE: usize = 2;
+    const LAYER2_SIZE: usize = 3;
+    const LAYER3_SIZE: usize = 1;
+
     // Build the input and label arrays
-    let inputs = array![[0., 0.], [0., 1.], [1., 0.], [1., 1.],];
+    let inputs = array![[0., 0.], [0., 1.], [1., 0.], [1., 1.]];
     let labels = array![[0.], [1.], [1.], [0.]];
 
     let dataset = Dataset::raw(inputs, labels, 1., BatchSize::One)?;
@@ -13,24 +18,27 @@ fn main() -> Result<()> {
 
     // Build the neural net
     let mut net = NeuralNetwork::new()
-        .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
+        .add_layer(Layer::new(LAYER1_SIZE, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid))
         .build();
 
-    // let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.1);
+    let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.);
 
     // train the network
     for epoch in 0..11000 {
+        let mut epoch_loss = 0.;
+
         for (samples, labels) in dataset.iter_train() {
-            let _out = net.forward(&samples);
-            if epoch % 100 == 0 {
-                println!("training epoch {}", epoch);
-                println!(
-                    "  Loss: {}\n",
-                    &loss_fn.compute(&_out, &labels).mean().unwrap()
-                );
-            }
+            let out = net.forward(&samples);
+            epoch_loss += &loss_fn.compute(&out, &labels).mean().unwrap();
+            optim.step(&mut net, &out);
+        }
+
+        if epoch % 100 == 0 {
+            println!("training epoch {}", epoch);
+            println!("Mean Loss: {}\n", epoch_loss / dataset.length() as f64);
+            println!("data len {}", dataset.length());
         }
     }
 
