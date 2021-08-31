@@ -3,12 +3,10 @@ use deep_thought::optimizer::Optimizer;
 use deep_thought::prelude::*;
 use ndarray::prelude::*;
 
-fn main() -> Result<()> {
-    // Network size must be known at compile-time
-    const LAYER1_SIZE: usize = 2;
-    const LAYER2_SIZE: usize = 3;
-    const LAYER3_SIZE: usize = 1;
+// Network size must be known at compile-time
+const _NUM_PARAMETERS: usize = 19;
 
+fn main() -> Result<()> {
     // Build the input and label arrays
     let inputs = array![[0., 0.], [0., 1.], [1., 0.], [1., 1.]];
     let labels = array![[0.], [1.], [1.], [0.]];
@@ -18,12 +16,12 @@ fn main() -> Result<()> {
 
     // Build the neural net
     let mut net = NeuralNetwork::new()
-        .add_layer(Layer::new(LAYER1_SIZE, 3).activation(Activation::Sigmoid))
+        .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid))
         .build();
 
-    let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.);
+    // let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.);
 
     // train the network
     for epoch in 0..11000 {
@@ -32,7 +30,7 @@ fn main() -> Result<()> {
         for (samples, labels) in dataset.iter_train() {
             let out = net.forward(&samples);
             epoch_loss += &loss_fn.compute(&out, &labels).mean().unwrap();
-            optim.step(&mut net, &out);
+            // optim.step(&mut net, &out);
         }
 
         if epoch % 100 == 0 {

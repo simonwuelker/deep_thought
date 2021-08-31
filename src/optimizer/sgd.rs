@@ -1,52 +1,47 @@
+use crate::autograd::Dual;
 use crate::optimizer::Optimizer;
 use crate::prelude::*;
 use ndarray::prelude::*;
 use num_traits::Float;
+use std::fmt;
 
 /// Implements stochastic gradient descent (optionally with momentum)
-pub struct SGD {
+pub struct SGD<F: Float + fmt::Debug, const N: usize> {
     lr: f64,
     momentum: f64,
-    v_weight: Vec<Array2<f64>>,
-    v_bias: Vec<Array2<f64>>,
+    v_weight: Array1<Dual<F, N>>,
+    v_bias: Array1<Dual<F, N>>,
 }
 
-impl<F, const N: usize> Optimizer<F, N> for SGD
+impl<F, const N: usize> Optimizer<F, N> for SGD<F, N>
 where
-    F: Float,
+    F: Float + fmt::Debug,
     f64: Into<F>,
 {
-    fn new(net: &BuiltNeuralNetwork<F, N>) -> Self {
-        let mut v_weight = vec![];
-        let mut v_bias = vec![];
-
-        for layer in &net.layers {
-            v_weight.push(Array2::zeros(layer.W.dim()));
-            v_bias.push(Array2::zeros(layer.B.dim()));
-        }
-
+    fn new(net: &NeuralNetwork<F, N>) -> Self {
         SGD {
             lr: 0.01,
             momentum: 0.,
-            v_weight: v_weight,
-            v_bias: v_bias,
+            // wrong, too many biases/weights
+            v_weight: Array1::<Dual<F, N>>::zeros(N),
+            v_bias: Array1::<Dual<F, N>>::zeros(N),
         }
     }
 
-    fn step(&mut self, net: &mut BuiltNeuralNetwork<F, N>) {
-        for (index, layer) in &mut net.layers.iter_mut().enumerate() {
-            // update velocity vector
-            self.v_weight[index] = self.momentum * &self.v_weight[index] + self.lr * &layer.dW;
-            self.v_bias[index] = self.momentum * &self.v_bias[index] + self.lr * &layer.dB;
+    fn step(&mut self, net: &mut NeuralNetwork<F, N>, loss: Dual<F, N>) {
+        // for (index, layer) in &mut net.layers.iter_mut().enumerate() {
+        //     // update velocity vector
+        //     self.v_weight[index] = self.momentum * &self.v_weight[index] + self.lr * &layer.dW;
+        //     self.v_bias[index] = self.momentum * &self.v_bias[index] + self.lr * &layer.dB;
 
-            // update network parameters
-            layer.W = &layer.W + &self.v_weight[index];
-            layer.B = &layer.B + &self.v_bias[index];
-        }
+        //     // update network parameters
+        //     layer.W = &layer.W + &self.v_weight[index];
+        //     layer.B = &layer.B + &self.v_bias[index];
+        // }
     }
 }
 
-impl SGD {
+impl<F: Float + fmt::Debug, const N: usize> SGD<F, N> {
     /// Set the learning rate
     ///
     /// **Panics** if the learning is below 0

@@ -1,12 +1,17 @@
+use crate::autograd::Dual;
 use ndarray::prelude::*;
+use num_traits::Float;
+use std::cmp::Ordering;
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 
 /// build a array of array2s from an array of diagonals. Really just a batched version of Array2::from_diag
-fn array3_from_diags(diags: &Array2<f64>) -> Array3<f64> {
-    let mut result = Array::zeros((diags.nrows(), diags.ncols(), diags.ncols()));
+fn array3_from_diags<F: Float + fmt::Debug, const N: usize>(
+    diags: &Array2<Dual<F, N>>,
+) -> Array3<Dual<F, N>> {
+    let mut result = Array3::<Dual<F, N>>::zeros((diags.nrows(), diags.ncols(), diags.ncols()));
 
     for (batch_ix, mut elem) in result.axis_iter_mut(Axis(0)).enumerate() {
         elem.diag_mut().assign(&diags.slice(s![batch_ix, ..]));
@@ -34,9 +39,21 @@ pub enum Activation {
 
 impl Activation {
     /// compute the result of this activation function for a given input (forward propagate)
-    pub fn compute(&self, inp: &Array2<f64>) -> Array2<f64> {
+    pub fn compute<F: Float + fmt::Debug, const N: usize>(
+        &self,
+        inp: &Array2<Dual<F, N>>,
+    ) -> Array2<Dual<F, N>>
+    where
+        f64: Into<F>,
+    {
         match &self {
-            Activation::ReLU => inp.map(|&x| if x > 0. { x } else { 0. }),
+            Activation::ReLU => inp.map(|&x| {
+                if x > 0. {
+                    x
+                } else {
+                    Dual::<F, N>::constant(0.into())
+                }
+            }),
             Activation::Linear => inp.clone(),
             Activation::Sigmoid => inp.map(|x| 1. / (1. + (-x).exp())),
             Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
@@ -62,12 +79,21 @@ impl Activation {
 
     /// compute the derivative of the activation function for a given input
     /// within a batch, the value v_ji means "how much does a change in the input node i_j affect the output node o_i
-    pub fn derivative(&self, inp: &Array2<f64>) -> Array3<f64> {
+    pub fn derivative<F: Float + fmt::Debug, const N: usize>(
+        &self,
+        inp: &Array2<Dual<F, N>>,
+    ) -> Array3<Dual<F, N>>
+    where
+        f64: Into<F>,
+    {
         match &self {
-            Activation::ReLU => array3_from_diags(&inp.map(|&x| if x > 0. { 1. } else { 0. })),
+            Activation::ReLU => {
+                array3_from_diags(&inp.map(|&x| if x > 0. { 1_f64.into() } else { 0_f64.into() }))
+            }
             Activation::Linear => array3_from_diags(&Array2::ones(inp.dim())),
             Activation::Sigmoid => array3_from_diags(
-                &(self.compute(inp) * (Array::<f64, _>::ones(inp.dim()) - self.compute(inp))),
+                &(self.compute(inp)
+                    * (Array::<Dual<F, N>, _>::ones(inp.dim()) - self.compute(inp))),
             ),
             Activation::LeakyReLU(slope) => {
                 array3_from_diags(&inp.map(|&x| if x > 0. { 1. } else { *slope }))
@@ -77,12 +103,13 @@ impl Activation {
             }
             Activation::Softmax => {
                 let out = self.compute(inp);
-                let mut result: Array3<f64> =
-                    Array3::zeros((inp.ncols(), inp.nrows(), inp.nrows()));
+                let mut result: Array3<Dual<F, N>> =
+                    Array3::<Dual<F, N>>::zeros((inp.ncols(), inp.nrows(), inp.nrows()));
                 // do the computation for every batch seperately
                 for (index, mut matrix) in result.axis_iter_mut(Axis(0)).enumerate() {
                     let s = out.slice(s![.., index]).clone().insert_axis(Axis(1));
-                    let jacob = Array2::from_diag(&out.slice(s![.., index])) - s.dot(&s.t());
+                    let jacob =
+                        Array2::<Dual<F, N>>::from_diag(&out.slice(s![.., index])) - s.dot(&s.t());
                     matrix.assign(&jacob);
                 }
                 result
