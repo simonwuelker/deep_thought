@@ -1,4 +1,4 @@
-#![feature(array_zip)]
+#![feature(array_zip, negative_impls, auto_traits)]
 
 //! This crate implements basic feedforward-neural Networks in rust.
 //!

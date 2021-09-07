@@ -1,13 +1,13 @@
 use crate::autograd::Dual;
 use ndarray::prelude::*;
-use num_traits::Num;
+use num_traits::Float;
 use std::cmp::Ordering;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// build a array of array2s from an array of diagonals. Really just a batched version of Array2::from_diag
-fn array3_from_diags<F: Num + Copy, const N: usize>(
+fn array3_from_diags<F: Float, const N: usize>(
     diags: &Array2<Dual<F, N>>,
 ) -> Array3<Dual<F, N>> {
     let mut result = Array3::<Dual<F, N>>::zeros((diags.nrows(), diags.ncols(), diags.ncols()));
@@ -38,7 +38,7 @@ pub enum Activation {
 
 impl Activation {
     /// compute the result of this activation function for a given input (forward propagate)
-    pub fn compute<F: Num + Copy, const N: usize>(
+    pub fn compute<F: Float, const N: usize>(
         &self,
         inp: &Array2<Dual<F, N>>,
     ) -> Array2<Dual<F, N>> {
@@ -75,7 +75,7 @@ impl Activation {
 
     /// compute the derivative of the activation function for a given input
     /// within a batch, the value v_ji means "how much does a change in the input node i_j affect the output node o_i
-    pub fn derivative<F: Num + Copy, const N: usize>(
+    pub fn derivative<F: Float, const N: usize>(
         &self,
         inp: &Array2<Dual<F, N>>,
     ) -> Array3<Dual<F, N>> {

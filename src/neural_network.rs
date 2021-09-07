@@ -7,7 +7,7 @@ use crate::{
 };
 use ndarray::prelude::*;
 use ndarray_rand::RandomExt;
-use num_traits::Num;
+use num_traits::{Num, Float};
 use rand_distr::Normal;
 
 #[cfg(feature = "serde")]
@@ -31,7 +31,7 @@ pub struct Layer<F: Num + Copy, const N: usize> {
     activation: Activation,
 }
 
-impl<F: Num + Copy, const N: usize> Layer<F, N> {
+impl<F: Float, const N: usize> Layer<F, N> {
     /// Construct a new layer with provided dimensions. Weights are initialized using [Glorot/Xavier Initialization](http://proceedings.mlr.press/v9/glorot10a.html)
     /// Biases are always initialized to zeros.
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
@@ -56,7 +56,7 @@ impl<F: Num + Copy, const N: usize> Layer<F, N> {
     }
 }
 
-impl<F: Num + Copy, const N: usize> NeuralNetwork<F, N> {
+impl<F: Float, const N: usize> NeuralNetwork<F, N> {
     /// Initialize a empty Neural Network
     pub fn new() -> NeuralNetwork<F, N> {
         NeuralNetwork { layers: vec![] }

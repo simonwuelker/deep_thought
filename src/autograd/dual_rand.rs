@@ -35,6 +35,6 @@ where
     D: Distribution<F>,
 {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Dual<F, N> {
-        Dual::constant(self.val.sample(rng))
+        Dual::constant(F::from(self.val.sample(rng)))
     }
 }

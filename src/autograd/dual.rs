@@ -78,7 +78,7 @@ macro_rules! forward_all_binop {
     };
 }
 
-impl<F: Num + PartialOrd + Copy, const N: usize> Dual<F, N> {
+impl<F: Num + Copy, const N: usize> Dual<F, N> {
     /// Create a new dual number, providing both its real part and the derivatives
     pub fn new(val: F, e: [F; N]) -> Self {
         Dual { val: val, e: e }
@@ -592,38 +592,261 @@ where
     }
 }
 
-// macro_rules! float_impl_basic {
-//     ($ty:ty, $($name:ident),*) => {
-//         $(fn $name() -> Self {
-//             Dual::constant(<$ty as Float>::$name())
-//         })*
-//     }
-// }
-//
-// macro_rules! float_impl_passthrough {
-//     ($result:ty, $($name:ident),*) => {
-//         $(fn $name(self) -> $result {
-//             (self.0).$name()
-//         })*
-//     }
-// }
-//
-// macro_rules! float_impl_self_passthrough {
-//     ($($name:ident),*) => {
-//         $(fn $name(self) -> Self {
-//             Dual::constant(self.val.$name())
-//         })*
-//     }
-// }
-//
-// impl<F: Float, const N: usize> Float for Dual<F, N> {
-//     float_impl_basic!(F, nan, infinity, neg_infinity, neg_zero, min_value, max_value);
-//     float_impl_passthrough!(bool, is_nan, is_infinite, is_finite, is_normal, is_sign_positive, is_sign_negative);
-//     float_impl_passthrough!((u64, i16, i8), integer_decode);
-//     float_impl_passthrough!(::std::num::FpCategory, classify);
-//     float_impl_self_passthrough!(floor, ceil, round, trunc);
-//
-//     fn fract(self) -> Self {
-//         Dual::new(self.val.fract(), [F::one(); N])
-//     }
-// }
+impl<F: Num + Copy + PartialOrd, const N: usize> Num for Dual<F, N> {
+    type FromStrRadixErr = <F as Num>::FromStrRadixErr;
+    fn from_str_radix(string: &str, radix: u32) -> Result<Self, <Self as Num>::FromStrRadixErr> {
+        Ok(Dual::constant(F::from_str_radix(string, radix)?))
+    }
+}
+
+macro_rules! float_impl_basic {
+    ($ty:ty, $($name:ident),*) => {
+        $(fn $name() -> Self {
+            Dual::constant(<$ty as Float>::$name())
+        })*
+    }
+}
+
+macro_rules! float_impl_passthrough {
+    ($result:ty, $($name:ident),*) => {
+        $(fn $name(self) -> $result {
+            (self.val).$name()
+        })*
+    }
+}
+
+macro_rules! float_impl_self_passthrough {
+    ($($name:ident),*) => {
+        $(fn $name(self) -> Self {
+            Dual::constant(self.val.$name())
+        })*
+    }
+}
+
+impl<F: Float, const N: usize> Float for Dual<F, N> {
+    float_impl_basic!(
+        F,
+        nan,
+        infinity,
+        neg_infinity,
+        neg_zero,
+        min_value,
+        max_value,
+        min_positive_value
+    );
+    float_impl_passthrough!(
+        bool,
+        is_nan,
+        is_infinite,
+        is_finite,
+        is_normal,
+        is_sign_positive,
+        is_sign_negative
+    );
+    float_impl_passthrough!((u64, i16, i8), integer_decode);
+    float_impl_passthrough!(::std::num::FpCategory, classify);
+    float_impl_self_passthrough!(floor, ceil, round, trunc);
+
+    fn fract(self) -> Self {
+        Dual::new(self.val.fract(), [F::one(); N])
+    }
+
+    fn abs(self) -> Self {
+        let e = self.e.map(|x| self.val.signum() * x);
+        Dual::new(self.val.abs(), e)
+    }
+
+    fn signum(self) -> Self {
+        Dual::new(self.val.signum(), [F::zero(); N])
+    }
+
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        let e = self.e.zip(a.e).zip(b.e).map(|((d, e), f)| d * a.val + self.val * e * f);
+        Dual::new(
+            self.val.mul_add(a.val, b.val),
+            e,
+        )
+    }
+
+    fn recip(self) -> Self {
+        Dual::<F, N>::one() / self
+    }
+
+    fn powi(self, n: i32) -> Self {
+        let exp = F::from(n).unwrap();
+        let e = self.e.map(|x| exp * x.powi(n - 1));
+        Dual::new(self.val.powi(n), e)
+    }
+
+    fn powf(self, n: Self) -> Self {
+        let val = self.val.powf(n.val);
+        let e = self.e.zip(n.e).map(|(a, b)| n.val * self.val.powf(b - F::one()) * a + val * self.val.ln() * b);
+        Dual::new(
+            val,
+            e,
+        )
+    }
+
+    fn sqrt(self) -> Self {
+        let val = self.val.sqrt();
+        let e = self.e.map(|x| x / (F::from(2).unwrap() * val));
+        Dual::new(val, e)
+    }
+
+    fn exp(self) -> Self {
+        let val = self.val.exp();
+        let e = self.e.map(|x| x * val);
+        Dual::new(val, e)
+    }
+
+    fn exp2(self) -> Self {
+        let val = self.val.exp2();
+        let e = self.e.map(|x| val * x * F::from(2).unwrap().ln());
+        Dual::new(val, e)
+    }
+
+    fn ln(self) -> Self {
+        let e = self.e.map(|x| x / self.val);
+        Dual::new(self.val.ln(), e)
+    }
+
+    fn log(self, base: Self) -> Self {
+        self.ln() / base.ln()
+    }
+
+    fn log2(self) -> Self {
+        let e = self.e.map(|x| x / (self.val * F::from(10).unwrap().ln()));
+        Dual::new(self.val.log2(), e)
+    }
+
+    fn log10(self) -> Self {
+        let e = self.e.map(|x| x / (self.val * F::from(10).unwrap().ln()));
+        Dual::new(self.val.log10(), e)
+    }
+
+    fn max(self, other: Self) -> Self {
+        let e = if self.val >= other.val {
+            self.e
+        } else {
+            other.e
+        };
+        Dual::new(self.val.max(other.val), e)
+    }
+
+    fn min(self, other: Self) -> Self {
+        let e = if self.val <= other.val {
+            self.e
+        } else {
+            other.e
+        };
+        Dual::new(self.val.min(other.val), e)
+    }
+
+    fn abs_sub(self, other: Self) -> Self {
+        let e = if self.val > other.val {
+            self.e.zip(other.e).map(|(a, b)| a - b)
+        } else {
+            [F::zero(); N]
+        };
+
+        Dual::new((self.val - other.val).max(F::zero()), e)
+    }
+
+    fn cbrt(self) -> Self {
+        let real = self.val.cbrt();
+        let e = self.e.map(|x| x / (F::from(3).unwrap() * real.powi(2)));
+        Dual::new(real, e)
+    }
+
+    fn hypot(self, other: Self) -> Self {
+        let real = self.val.hypot(other.val);
+        let zipped = self.e.zip(other.e);
+        let e = zipped.map(|(a, b)| (self.val * b + other.val * a) / real);
+        Dual::new(real, e)
+    }
+
+    fn sin(self) -> Self {
+        let e = self.e.map(|x| self.val.cos() * x);
+        Dual::new(self.val.sin(), e)
+    }
+
+    fn cos(self) -> Self {
+        let e = self.e.map(|x| -self.val.sin() * x);
+        Dual::new(self.val.cos(), e)
+    }
+
+    fn tan(self) -> Self {
+        let cos = self.val.cos();
+        let e = self.e.map(|x| x / cos.powi(2));
+        Dual::new(self.val.tan(), e)
+    }
+
+    fn asin(self) -> Self {
+        let e = self.e.map(|x| x / (F::one() - self.val.powi(2)).sqrt());
+        Dual::new(self.val.asin(), e)
+    }
+
+    fn acos(self) -> Self {
+        let e = self.e.map(|x| -x / (F::one() - self.val.powi(2)).sqrt());
+        Dual::new(self.val.acos(), e)
+    }
+
+    fn atan(self) -> Self {
+        let e = self.e.map(|x| x / (self.val.powi(2) + F::one()));
+        Dual::new(self.val.atan(), e)
+    }
+
+    fn atan2(self, other: Self) -> Self {
+        let zipped = self.e.zip(other.e);
+        let e = zipped
+            .map(|(a, b)| (self.val * b - other.val * a) / (self.val.powi(2) + other.val.powi(2)));
+        Dual::new(self.val.atan2(other.val), e)
+    }
+
+    fn sin_cos(self) -> (Self, Self) {
+        (self.sin(), self.cos())
+    }
+
+    fn exp_m1(self) -> Self {
+        let e = self.e.map(|x| x * self.val.exp());
+        Dual::new(self.val.exp_m1(), e)
+    }
+
+    fn ln_1p(self) -> Self {
+        let e = self.e.map(|x| x / (self.val + F::one()));
+        Dual::new(self.val.ln_1p(), e)
+    }
+
+    fn sinh(self) -> Self {
+        let e = self.e.map(|x| x * self.val.cosh());
+        Dual::new(self.val.sinh(), e)
+    }
+
+    fn cosh(self) -> Self {
+        let e = self.e.map(|x| x * x.sinh());
+        Dual::new(self.val.cosh(), e)
+    }
+
+    fn tanh(self) -> Self {
+        let cosh = self.val.cosh();
+        let e = self.e.map(|x| x / cosh.powi(2));
+        Dual::new(self.val.tanh(), e)
+    }
+
+    fn asinh(self) -> Self {
+        let e = self.e.map(|x| x / (self.val.powi(2) + F::one()).sqrt());
+        Dual::new(self.val.asinh(), e)
+    }
+
+    fn acosh(self) -> Self {
+        let e = self
+            .e
+            .map(|x| x / ((self.val + F::one()).sqrt() * (self.val - F::one()).sqrt()));
+        Dual::new(self.val.acosh(), e)
+    }
+
+    fn atanh(self) -> Self {
+        let e = self.e.map(|x| x / (F::one() - self.val.powi(2)));
+        Dual::new(self.val.atanh(), e)
+    }
+}
