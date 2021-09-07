@@ -1,14 +1,13 @@
 use crate::autograd::Dual;
 use ndarray::prelude::*;
-use num_traits::Float;
+use num_traits::Num;
 use std::cmp::Ordering;
-use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// build a array of array2s from an array of diagonals. Really just a batched version of Array2::from_diag
-fn array3_from_diags<F: Float + fmt::Debug, const N: usize>(
+fn array3_from_diags<F: Num + Copy, const N: usize>(
     diags: &Array2<Dual<F, N>>,
 ) -> Array3<Dual<F, N>> {
     let mut result = Array3::<Dual<F, N>>::zeros((diags.nrows(), diags.ncols(), diags.ncols()));
@@ -39,25 +38,22 @@ pub enum Activation {
 
 impl Activation {
     /// compute the result of this activation function for a given input (forward propagate)
-    pub fn compute<F: Float + fmt::Debug, const N: usize>(
+    pub fn compute<F: Num + Copy, const N: usize>(
         &self,
         inp: &Array2<Dual<F, N>>,
-    ) -> Array2<Dual<F, N>>
-    where
-        f64: Into<F>,
-    {
+    ) -> Array2<Dual<F, N>> {
         match &self {
             Activation::ReLU => inp.map(|&x| {
                 if x > 0. {
                     x
                 } else {
-                    Dual::<F, N>::constant(0.into())
+                    Dual::<F, N>::constant(F::zero())
                 }
             }),
             Activation::Linear => inp.clone(),
             Activation::Sigmoid => inp.map(|x| 1. / (1. + (-x).exp())),
             Activation::LeakyReLU(slope) => inp.map(|&x| if x > 0. { x } else { slope * x }),
-            Activation::Tanh => inp.map(|&x| ((2. * x).exp() - 1.) / ((2. * x).exp() + 1.)),
+            Activation::Tanh => inp.map(|&x| ((2. * x).exp() - F::one()) / ((2. * x).exp() + F::one())),
             Activation::Softmax => {
                 // shift the values by -max(inputs) to prevent overflow (does not affect derivative)
                 let max = inp
@@ -79,16 +75,13 @@ impl Activation {
 
     /// compute the derivative of the activation function for a given input
     /// within a batch, the value v_ji means "how much does a change in the input node i_j affect the output node o_i
-    pub fn derivative<F: Float + fmt::Debug, const N: usize>(
+    pub fn derivative<F: Num + Copy, const N: usize>(
         &self,
         inp: &Array2<Dual<F, N>>,
-    ) -> Array3<Dual<F, N>>
-    where
-        f64: Into<F>,
-    {
+    ) -> Array3<Dual<F, N>> {
         match &self {
             Activation::ReLU => {
-                array3_from_diags(&inp.map(|&x| if x > 0. { 1_f64.into() } else { 0_f64.into() }))
+                array3_from_diags(&inp.map(|&x| if x > 0. { F::one() } else { F::zero() }))
             }
             Activation::Linear => array3_from_diags(&Array2::ones(inp.dim())),
             Activation::Sigmoid => array3_from_diags(

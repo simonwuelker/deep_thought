@@ -1,25 +1,28 @@
 use crate::{
-    activation::Activation, autograd::Dual, error::Error, loss::Loss, optimizer::Optimizer,
+    activation::Activation,
+    autograd::{Dual, DualDistribution},
+    error::Error,
+    loss::Loss,
+    optimizer::Optimizer,
 };
 use ndarray::prelude::*;
 use ndarray_rand::RandomExt;
-use num_traits::{Float, Zero};
-use rand_distr::{Distribution, Normal};
-use std::fmt;
+use num_traits::Num;
+use rand_distr::Normal;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// A Neural Network consisting of a an input/output and any number of additional hidden [`Layer`]s
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct NeuralNetwork<F: Float + fmt::Debug, const N: usize> {
+pub struct NeuralNetwork<F: Num + Copy, const N: usize> {
     pub layers: Vec<Layer<F, N>>,
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[allow(non_snake_case)] // non snake case kinda makes sense with matrices
 /// A single neuron layer with an associated [`Activation`] function
-pub struct Layer<F: Float + fmt::Debug, const N: usize> {
+pub struct Layer<F: Num + Copy, const N: usize> {
     /// Weight matrix
     pub W: Array2<Dual<F, N>>,
     /// Bias vector
@@ -28,20 +31,14 @@ pub struct Layer<F: Float + fmt::Debug, const N: usize> {
     activation: Activation,
 }
 
-impl<F, const N: usize> Layer<F, N>
-where
-    F: Float + fmt::Debug,
-    f64: Into<F>,
-{
+impl<F: Num + Copy, const N: usize> Layer<F, N> {
     /// Construct a new layer with provided dimensions. Weights are initialized using [Glorot/Xavier Initialization](http://proceedings.mlr.press/v9/glorot10a.html)
     /// Biases are always initialized to zeros.
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
-        let std: Dual<F, N> = (2. / (input_dim + output_dim) as f64).sqrt().into();
+        let std = (2. / (input_dim + output_dim) as f64).sqrt();
+        let dist = DualDistribution::new(Normal::new(0., std).unwrap());
         Self {
-            W: Array2::<Dual<F, N>>::random(
-                (output_dim, input_dim),
-                Normal::new(Dual::<F, N>::zero(), std).unwrap(),
-            ),
+            W: Array2::<Dual<F, N>>::random((output_dim, input_dim), dist),
             B: Array2::<Dual<F, N>>::zeros((output_dim, 1)),
             activation: Activation::default(),
         }
@@ -59,11 +56,7 @@ where
     }
 }
 
-impl<F, const N: usize> NeuralNetwork<F, N>
-where
-    F: Float + fmt::Debug,
-    f64: Into<F>,
-{
+impl<F: Num + Copy, const N: usize> NeuralNetwork<F, N> {
     /// Initialize a empty Neural Network
     pub fn new() -> NeuralNetwork<F, N> {
         NeuralNetwork { layers: vec![] }

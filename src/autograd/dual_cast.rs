@@ -1,11 +1,12 @@
 use crate::autograd::Dual;
-use std::marker::Copy;
 use num_traits::{AsPrimitive, FromPrimitive, Num, NumCast, ToPrimitive};
+use std::marker::Copy;
 
 macro_rules! impl_to_primitive {
     ($ty:ty, $to:ident) => {
         #[inline]
-        fn $to(&self) -> Option<$ty> { self.val.$to()
+        fn $to(&self) -> Option<$ty> {
+            self.val.$to()
         }
     };
 }
