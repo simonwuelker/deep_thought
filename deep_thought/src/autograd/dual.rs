@@ -661,11 +661,12 @@ impl<F: Float, const N: usize> Float for Dual<F, N> {
     }
 
     fn mul_add(self, a: Self, b: Self) -> Self {
-        let e = self.e.zip(a.e).zip(b.e).map(|((d, e), f)| d * a.val + self.val * e * f);
-        Dual::new(
-            self.val.mul_add(a.val, b.val),
-            e,
-        )
+        let e = self
+            .e
+            .zip(a.e)
+            .zip(b.e)
+            .map(|((d, e), f)| d * a.val + self.val * e * f);
+        Dual::new(self.val.mul_add(a.val, b.val), e)
     }
 
     fn recip(self) -> Self {
@@ -680,11 +681,11 @@ impl<F: Float, const N: usize> Float for Dual<F, N> {
 
     fn powf(self, n: Self) -> Self {
         let val = self.val.powf(n.val);
-        let e = self.e.zip(n.e).map(|(a, b)| n.val * self.val.powf(b - F::one()) * a + val * self.val.ln() * b);
-        Dual::new(
-            val,
-            e,
-        )
+        let e = self
+            .e
+            .zip(n.e)
+            .map(|(a, b)| n.val * self.val.powf(b - F::one()) * a + val * self.val.ln() * b);
+        Dual::new(val, e)
     }
 
     fn sqrt(self) -> Self {

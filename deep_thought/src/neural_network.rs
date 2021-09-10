@@ -7,8 +7,8 @@ use crate::{
 };
 use ndarray::prelude::*;
 use ndarray_rand::RandomExt;
-use num_traits::{Num, Float};
-use rand_distr::{StandardNormal, Normal, Distribution};
+use num_traits::{Float, Num};
+use rand_distr::{Distribution, Normal, StandardNormal};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,10 @@ pub struct Layer<F: Num + Copy, const N: usize> {
     activation: Activation<F, N>,
 }
 
-impl<F: Float, const N: usize> Layer<F, N> 
-where StandardNormal: Distribution<F> {
+impl<F: Float, const N: usize> Layer<F, N>
+where
+    StandardNormal: Distribution<F>,
+{
     /// Construct a new layer with provided dimensions. Weights are initialized using [Glorot/Xavier Initialization](http://proceedings.mlr.press/v9/glorot10a.html)
     /// Biases are always initialized to zeros.
     pub fn new(input_dim: usize, output_dim: usize) -> Self {

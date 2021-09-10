@@ -3,3 +3,7 @@ members = [
     "deep_thought",
     "deep_thought_derive",
 ]
+
+[profile.release]
+lto = "thin"
+

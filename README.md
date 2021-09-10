@@ -56,7 +56,7 @@ fn main() -> Result<()>{
     Ok(())
 }
 ```
-For more usage examples, please take a look at [/examples](https://github.com/Wuelle/rust_nn/tree/main/examples)
+For more usage examples, please take a look at [/examples](https://github.com/Wuelle/deep_thought/tree/main/examples)
 
 ## Nightly Usage
 Deep_thought makes use of the `negative_impls`, `auto_traits` and `array_zip` features, which are not available on the stable release channel yet.
@@ -67,8 +67,7 @@ Deep_thought makes use of the `negative_impls`, `auto_traits` and `array_zip` fe
 * Optional Serialization/Deserialization support via the `serde` feature
 
 ## TODO
-* Add decreasing learning rate (probably also easy)
-* add CNN's
+* Add Unit tests, mostly for autograd
 
 ## Additional Ressources
 Some stuff i found to be quite helpful if you are interested in understanding the math behind neural networks
