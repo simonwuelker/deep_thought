@@ -1,0 +1,37 @@
+[package]
+name = "deep_thought"
+version = "0.1.2"
+authors = ["Wuelle <simon.wuelker@arcor.de>"]
+edition = "2018"
+license = "MIT"
+description = "Feed-forward neural networks in rust"
+readme = "./README.md"
+repository = "https://github.com/Wuelle/rust_nn"
+keywords = ["neural-network", "machine-learning", "deep-neural-networks"]
+categories = ["science", "deep-learning"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+lto = "thin"
+
+[dev-dependencies]
+serde_json = "1"
+criterion = { version = "0.3", features = ['html_reports'] }
+csv = "1.1"
+
+[dependencies]
+anyhow = "1"
+thiserror = "1"
+ndarray = { version = "0.15", features = ['approx', 'serde'] }
+ndarray-rand = "0.14"
+serde = { version = "1", features = ['derive'], optional = true}
+num-traits = "0.2"
+rand = "0.8"
+rand_distr = "0.4"
+deep_thought_derive = { version = "0.1", path = "../deep_thought_derive" }
+
+[[bench]]
+name = "forward_prop"
+harness = false
+

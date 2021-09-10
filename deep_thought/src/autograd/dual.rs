@@ -12,8 +12,8 @@ pub struct Dual<F, const N: usize> {
     pub e: [F; N],
 }
 
-pub type Dual32<const N: usize> = Dual<f32, N>;
-pub type Dual64<const N: usize> = Dual<f64, N>;
+// pub type Dual32<const N: usize> = Dual<f32, N>;
+// pub type Dual64<const N: usize> = Dual<f64, N>;
 
 impl<F: Num + PartialOrd + Copy, const N: usize> From<F> for Dual<F, N> {
     #[inline]
