@@ -22,8 +22,7 @@ pub struct DualDistribution<D> {
 }
 
 impl<D> DualDistribution<D> {
-    /// Creates a complex distribution from independent
-    /// distributions of the real and imaginary parts.
+    /// Creates a Dual distribution from an independent Distribution
     pub fn new(val: D) -> Self {
         DualDistribution { val }
     }

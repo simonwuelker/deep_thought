@@ -2,6 +2,7 @@ use anyhow::Result;
 use deep_thought::optimizer::Optimizer;
 use deep_thought::prelude::*;
 use ndarray::prelude::*;
+use num_traits::Float;
 
 // Network size must be known at compile-time
 const _NUM_PARAMETERS: usize = 19;
@@ -18,8 +19,7 @@ fn main() -> Result<()> {
     let mut net = NeuralNetwork::new()
         .add_layer(Layer::new(2, 3).activation(Activation::Sigmoid))
         .add_layer(Layer::new(3, 3).activation(Activation::Sigmoid))
-        .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid))
-        .build();
+        .add_layer(Layer::new(3, 1).activation(Activation::Sigmoid));
 
     // let mut optim = optimizer::SGD::new(&net).learning_rate(0.3).momentum(0.);
 
