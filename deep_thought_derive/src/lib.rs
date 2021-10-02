@@ -1,10 +1,12 @@
-use proc_macro::{TokenStream, TokenTree};
+//! Procedural Macros for the deep_thought crate
+
+use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse::{Error, Parse, ParseStream, Result},
     parse_macro_input,
     spanned::Spanned,
-    DeriveInput, Expr,
+    Expr,
     Expr::{Call, MethodCall},
     Ident, Lit, Token, Type, Visibility,
 };
@@ -56,15 +58,15 @@ macro_rules! int_lit_from_fn_arg {
     };
 }
 
-// this macro will very likely break in the future when deep_thought's syntax changes
+/// A macro to count the parameters within a neural network at compile time. Enables use of dual numbers
 #[proc_macro]
 pub fn neural_network(input: TokenStream) -> TokenStream {
     // Parse the TokenStream into an Abstract Syntax Tree (AST)
     let cloned_inp = input.clone();
     let Network {
-        visibility,
-        name,
-        ty,
+        visibility: _,
+        name: _,
+        ty: _,
         init,
     } = parse_macro_input!(cloned_inp as Network);
 
@@ -96,6 +98,9 @@ pub fn neural_network(input: TokenStream) -> TokenStream {
     let constant: TokenStream = quote!{
         const _NUM_PARAMETERS = #num_parameters;
     }.into();
-    input.clone().extend(constant);
-    input
+    constant
+    // let mut extended = input.clone();
+    // extended.extend(constant);
+    // println!("{:?}", extended);
+    // extended
 }
