@@ -24,3 +24,4 @@ If you want to learn more about the math behind neural networks, take a look at 
 Deep_thought makes use of the `negative_impls`, `auto_traits` and `array_zip` features, which are not available on the stable release channel yet.
 
 <a class="user-mention" data-hovercard-type="user" href="/Wuelle" data-hovercard-url="/users/Wuelle/hovercard">Wuelle</a>
+<a class="user-mention" data-hovercard-type="user" href="/Wuelle" data-hovercard-url="/users/Wuelle/hovercard">Wuelle</a>
