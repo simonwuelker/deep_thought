@@ -1,7 +1,3 @@
-<!--
-Unfortunately, GitHub refuses to allow user mentions within READMEs. https://github.com/github/markup/issues/209
-Thanks to a custom workflow, its still possible
--->
 ![crates.io version](https://flat.badgen.net/crates/v/deep_thought)
 ![crates.io downloads](https://flat.badgen.net/crates/d/deep_thought)
 
@@ -22,5 +18,3 @@ If you want to learn more about the math behind neural networks, take a look at 
 
 ## Nightly Usage
 Deep_thought makes use of the `negative_impls`, `auto_traits` and `array_zip` features, which are not available on the stable release channel yet.
-
-<a class="user-mention" data-hovercard-type="user" href="/Wuelle" data-hovercard-url="/users/Wuelle/hovercard">Wuelle</a>
