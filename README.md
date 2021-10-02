@@ -12,7 +12,7 @@ Instead, it utilizes Dual Numbers, which allow for the calculation of derivative
 
 There is still a long way to go before this crate will become usable (if ever). 
 
-For more information about Dual Numbers, please take a look at these excellent Blogposts by @Atrix256:
+For more information about Dual Numbers, please take a look at these excellent Blogposts by <a class="user-mention" data-hovercard-type="user" data-hovercard-url="/users/Atrix256/hovercard" href="/Atrix256">@Atrix256</a>:
 * [Dual Numbers & Automatic Differentiation](https://blog.demofox.org/2014/12/30/dual-numbers-automatic-differentiation/)
 * [Multivariable Dual Numbers & Automatic Differentiation](https://blog.demofox.org/2017/02/20/multivariable-dual-numbers-automatic-differentiation/)
 * [Neural Network Gradients: Backpropagation, Dual Numbers, Finite Differences](https://blog.demofox.org/2017/03/13/neural-network-gradients-backpropagation-dual-numbers-finite-differences/)
