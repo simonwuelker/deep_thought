@@ -10,7 +10,6 @@ use syn::{
 };
 
 struct Network {
-    visibility: Visibility,
     name: Ident,
     ty: Type,
     init: Expr,
@@ -18,7 +17,7 @@ struct Network {
 
 impl Parse for Network {
     fn parse(input: ParseStream) -> Result<Self> {
-        let visibility: Visibility = input.parse()?;
+        input.parse::<Token![let]>()?;
         let name: Ident = input.parse()?;
         input.parse::<Token![:]>()?;
         let ty: Type = input.parse()?;
@@ -26,7 +25,6 @@ impl Parse for Network {
         let init: Expr = input.parse()?;
         input.parse::<Token![;]>()?;
         Ok(Network {
-            visibility,
             name,
             ty,
             init,
@@ -62,7 +60,6 @@ pub fn neural_network(input: TokenStream) -> TokenStream {
     // Parse the TokenStream into an Abstract Syntax Tree (AST)
     let cloned_inp = input.clone();
     let Network {
-        visibility,
         name,
         ty,
         init,
@@ -93,9 +90,9 @@ pub fn neural_network(input: TokenStream) -> TokenStream {
         fn_ref = &expr_method_call.receiver;
     }
 
-    let constant: TokenStream = quote!{
-        const _NUM_PARAMETERS = #num_parameters;
+    let mut result: TokenStream = quote!{
+        const _NUM_PARAMETERS: usize = #num_parameters;
     }.into();
-    input.clone().extend(constant);
-    input
+    result.extend(input);
+    result
 }

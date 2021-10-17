@@ -10,7 +10,7 @@ use num_traits::Float;
 
 fn main() -> Result<()> {
     neural_network!(
-        let x: usize = NeuralNetwork::new().add_layer(Layer::new(3, 2)).add_layer(Layer::new(3, 1).activation(Activation::default())).add_layer(Layer::new(3, 1));
+        let x: NeuralNetwork<f32, _NUM_PARAMETERS> = NeuralNetwork::new().add_layer(Layer::new(3, 2)).add_layer(Layer::new(3, 1).activation(Activation::default())).add_layer(Layer::new(3, 1));
     );
     println!("there are {} parameters", _NUM_PARAMETERS);
     // Build the input and label arrays

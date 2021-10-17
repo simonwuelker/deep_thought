@@ -3,6 +3,7 @@
 
 # Deep Thought
 This crate implements feedforward-neural Networks in rust.
+**As of right now, this crate is far from a usable state.**
 
 A basix XOR training example might look like this:
 ```rust
