@@ -1,5 +1,5 @@
 use anyhow::Result;
-use deep_thought::optimizer::Optimizer;
+// use deep_thought::optimizer::Optimizer;
 use deep_thought::prelude::*;
 use deep_thought_derive::neural_network;
 use ndarray::prelude::*;
@@ -12,6 +12,7 @@ fn main() -> Result<()> {
     neural_network!(
         let x: NeuralNetwork<f32, _NUM_PARAMETERS> = NeuralNetwork::new().add_layer(Layer::new(3, 2)).add_layer(Layer::new(3, 1).activation(Activation::default())).add_layer(Layer::new(3, 1));
     );
+    // lol
     println!("there are {} parameters", _NUM_PARAMETERS);
     // Build the input and label arrays
     // let inputs = array![[0., 0.], [0., 1.], [1., 0.], [1., 1.]];

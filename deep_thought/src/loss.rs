@@ -1,22 +1,18 @@
 use ndarray::prelude::*;
+use crate::autograd::Dual;
+use num_traits::Float;
 
+/// A continuous, derivable function to describe how close one value is to another
 pub enum Loss {
+    /// Mean Squared Error Loss
     MSE,
 }
 
 impl Loss {
     /// compute the loss for a given output/target pair
-    pub fn compute(&self, output: &Array2<f64>, target: &Array2<f64>) -> Array2<f64> {
+    pub fn compute<F: Float, const N: usize>(&self, output: &Array2<Dual<F, N>>, target: &Array2<F>) -> Array2<Dual<F, N>> {
         match &self {
-            Loss::MSE => ((output - target) * (output - target)),
-        }
-    }
-
-    /// compute the derivative of the loss for a given output/target pair
-    /// (how sensitive the result of the loss.compute fn is to changes in the output)
-    pub fn derivative(&self, output: &Array2<f64>, target: &Array2<f64>) -> Array2<f64> {
-        match &self {
-            Loss::MSE => target - output, // factor 2 is irrelevant because its constant
+            Loss::MSE => (output - target) * (output - target),
         }
     }
 }
