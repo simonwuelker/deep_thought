@@ -2,6 +2,7 @@
 members = [
     "deep_thought",
     "deep_thought_derive",
+    "deep_array",
 ]
 
 [profile.release]
