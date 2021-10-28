@@ -17,8 +17,5 @@ pub enum Error {
 
     /// Trying to reshape into an incompatible shape
     #[error("Cannot reshape array of size {size} into shape {new_shape:?}")]
-    IncompatibleShape {
-        size: usize,
-        new_shape: Vec<usize>,
-    }
+    ReshapeIncompatibleShape { size: usize, new_shape: Vec<usize> },
 }

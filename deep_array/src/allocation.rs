@@ -3,18 +3,16 @@ use crate::Array;
 use std::alloc::{alloc, dealloc, Layout};
 
 impl<T, const N: usize> Array<T, N> {
-    /// Create an uninitialized Array. 
+    /// Create an uninitialized Array.
     ///
     /// # Safety
-    /// 
+    ///
     /// This is unsafe because it leaves the arrays contents uninitialized, meaning that reading from them will
     /// cause undefined behaviour.
     pub unsafe fn uninitialized(dim: [usize; N]) -> Self {
         let stride = std::mem::size_of::<T>();
-        let ptr = unsafe {
-            let layout = Layout::from_size_align_unchecked(dim.iter().product(), stride);
-            alloc(layout) as *mut T
-        };
+        let layout = Layout::from_size_align(dim.iter().product(), stride).unwrap();
+        let ptr = unsafe { alloc(layout) as *mut T };
         Self {
             ptr: ptr,
             stride: stride,
@@ -34,11 +32,51 @@ impl<T, const N: usize> Drop for Array<T, N> {
     }
 }
 
-impl<T, const N: usize> Clone for Array<T, N> {
+impl<T: Copy, const N: usize> Clone for Array<T, N> {
     fn clone(&self) -> Self {
+        println!("yolo");
         unimplemented!()
+        // let cloned: Self;
+        // println!("initializing clone");
+        // // Safe because we won't be reading from uninitialized memory.
+        // unsafe {
+        //     cloned = Array::uninitialized(self.dim);
+        // }
+
+        // println!("writing to clone");
+        // // Safe because
+        // // * T is Copy
+        // // * self.ptr is valid for self.size() reads
+        // // * cloned.ptr is valid for self.size() writes
+        // // * both self and cloned are properly aligned
+        // // * self and cloned do not overlap
+        // unsafe {
+        //     std::ptr::copy_nonoverlapping(self.ptr, cloned.ptr, self.size());
+        // }
+
+        // println!("returning clone");
+        // cloned
     }
 }
+
+// impl<T: Clone, const N: usize> Clone for Array<T, N> {
+//     fn clone(&self) -> Self {
+//         let mut cloned: Self;
+//         // Safe because we won't be reading from uninitialized memory.
+//         unsafe {
+//             cloned = Array::uninitialized(self.dim);
+//         }
+//
+//         // clone each element (can probably be done faster)
+//         for offset in 0..self.size() {
+//             // safe because offset will never exceed self.size()
+//             unsafe {
+//                 *cloned._get_mut_unchecked(offset) = self._get_unchecked(offset).clone();
+//             }
+//         }
+//         cloned
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -46,30 +84,30 @@ mod tests {
 
     #[test]
     fn alloc_dealloc() {
-        // Safe because we won't be reading from uninitialized memory. TODO: make this safe
+        // Safe because we won't be reading from uninitialized memory.
         let mut a: Array<usize, 1>;
         unsafe {
             a = Array::uninitialized([2]);
         }
-        {
-            let ref_1 = a._get_mut(0).unwrap();
-            *ref_1 = 3;
-        }
+        // Write
+        let ref_1 = a._get_mut(0).unwrap();
+        *ref_1 = 3;
+
+        // Read
         let ref_2 = a._get(0).unwrap();
+
         assert_eq!(*ref_2, 3);
     }
 
     #[test]
     fn clone() {
-        // Safe because we won't be reading from uninitialized memory. TODO: make this safe
-        let mut a: Array<usize, 1>;
-        unsafe {
-            a = Array::uninitialized([2]);
-        }
+        let mut a: Array<usize, 1> = Array::fill(0, [2]);
         let mut b = a.clone();
+
+        // assert that the arrays can be mutated independently of each other
         *a.get_mut([1]).unwrap() = 3;
         *b.get_mut([1]).unwrap() = 4;
         assert_eq!(*a.get([1]).unwrap(), 3);
-        assert_ne!(*b.get([1]).unwrap(), 4);
+        assert_eq!(*b.get([1]).unwrap(), 4);
     }
 }
