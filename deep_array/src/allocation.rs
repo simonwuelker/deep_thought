@@ -11,8 +11,9 @@ impl<T, const N: usize> Array<T, N> {
     /// cause undefined behaviour.
     pub unsafe fn uninitialized(dim: [usize; N]) -> Self {
         let stride = std::mem::size_of::<T>();
-        let layout = Layout::from_size_align(dim.iter().product(), stride).unwrap();
-        let ptr = unsafe { alloc(layout) as *mut T };
+        let layout = Layout::array::<T>(dim.iter().product()).unwrap();
+        let ptr = alloc(layout.clone()) as *mut T;
+
         Self {
             ptr: ptr,
             stride: stride,
@@ -34,49 +35,26 @@ impl<T, const N: usize> Drop for Array<T, N> {
 
 impl<T: Copy, const N: usize> Clone for Array<T, N> {
     fn clone(&self) -> Self {
-        println!("yolo");
-        unimplemented!()
-        // let cloned: Self;
-        // println!("initializing clone");
-        // // Safe because we won't be reading from uninitialized memory.
-        // unsafe {
-        //     cloned = Array::uninitialized(self.dim);
-        // }
+        let cloned: Self;
 
-        // println!("writing to clone");
-        // // Safe because
-        // // * T is Copy
-        // // * self.ptr is valid for self.size() reads
-        // // * cloned.ptr is valid for self.size() writes
-        // // * both self and cloned are properly aligned
-        // // * self and cloned do not overlap
-        // unsafe {
-        //     std::ptr::copy_nonoverlapping(self.ptr, cloned.ptr, self.size());
-        // }
+        // Safe because we won't be reading from uninitialized memory.
+        unsafe {
+            cloned = Array::uninitialized(self.dim);
+        }
 
-        // println!("returning clone");
-        // cloned
+        // Safe because
+        // * T is Copy
+        // * self.ptr is valid for self.size() reads
+        // * cloned.ptr is valid for self.size() writes
+        // * both self and cloned are properly aligned
+        // * self and cloned do not overlap
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.ptr, cloned.ptr, self.size());
+        }
+
+        cloned
     }
 }
-
-// impl<T: Clone, const N: usize> Clone for Array<T, N> {
-//     fn clone(&self) -> Self {
-//         let mut cloned: Self;
-//         // Safe because we won't be reading from uninitialized memory.
-//         unsafe {
-//             cloned = Array::uninitialized(self.dim);
-//         }
-//
-//         // clone each element (can probably be done faster)
-//         for offset in 0..self.size() {
-//             // safe because offset will never exceed self.size()
-//             unsafe {
-//                 *cloned._get_mut_unchecked(offset) = self._get_unchecked(offset).clone();
-//             }
-//         }
-//         cloned
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
