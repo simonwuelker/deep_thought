@@ -1,5 +1,10 @@
 #![feature(array_zip)]
+
+#[cfg(feature = "debug_allocator")]
+mod debug_allocator;
+
 mod allocation;
+mod arithmetic;
 #[deny(missing_docs)]
 
 /// deep_array provides the Array<T, N> type, which is a n-dimensional array.
@@ -164,7 +169,7 @@ impl<T: PartialEq, const N: usize> PartialEq for Array<T, N> {
                 // Safe because offset will never exceed self.size() and other.size() == self.size()
                 unsafe {
                     if *self._get_unchecked(offset) != *other._get_unchecked(offset) {
-                        return false
+                        return false;
                     }
                 }
             }
@@ -179,22 +184,15 @@ mod tests {
 
     #[test]
     fn index() {
-        // Safe because we won't be reading from uninitialized memory. TODO: make this safe
-        let mut a: Array<usize, 1>;
-        unsafe {
-            a = Array::uninitialized([3]);
-        }
+        let mut a: Array<usize, 1> = Array::fill(1, [3]);
         *a.get_mut([0]).unwrap() = 3;
         assert_eq!(*a.get([0]).unwrap(), 3);
     }
 
     #[test]
     fn calc_internal_index() {
-        // Safe because we won't be reading from uninitialized memory. TODO: make this safe
-        let a: Array<usize, 3>;
-        unsafe {
-            a = Array::uninitialized([2, 2, 2]);
-        }
+        let a: Array<usize, 3> = Array::fill(1, [2, 2, 2]);
+
         assert_eq!(a._get_internal_ix([0, 0, 0]).unwrap(), 0);
         assert_eq!(a._get_internal_ix([0, 0, 1]).unwrap(), 1);
         assert_eq!(a._get_internal_ix([0, 1, 0]).unwrap(), 2);

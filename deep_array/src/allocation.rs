@@ -27,7 +27,7 @@ impl<T, const N: usize> Drop for Array<T, N> {
         unsafe {
             dealloc(
                 self.ptr as *mut u8,
-                Layout::from_size_align_unchecked(self.dim.iter().product(), self.stride),
+                Layout::array::<T>(self.size()).unwrap(),
             )
         };
     }
