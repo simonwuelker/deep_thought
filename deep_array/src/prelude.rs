@@ -1,3 +1,3 @@
 //! Standard imports
 
-pub use crate::array::Array;
+pub use crate::array::*;

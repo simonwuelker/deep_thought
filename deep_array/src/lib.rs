@@ -5,8 +5,8 @@
 pub mod array;
 pub mod error;
 
-mod allocation;
-mod arithmetic;
+pub mod allocation;
+// mod arithmetic; // Does not work, deactivated for now
 mod prelude;
 
 #[cfg(feature = "debug_allocator")]
