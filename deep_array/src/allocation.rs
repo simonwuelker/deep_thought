@@ -1,8 +1,8 @@
 //! Stuff about allocating/freeing heap memory
 
-use crate::Array;
+use crate::array_trait::Initialize;
+use crate::{Array, BaseArray};
 use std::alloc::{alloc, dealloc, Layout};
-use std::ops::Rem;
 
 #[cfg(target_pointer_width = "64")]
 const WORD_SIZE: usize = 8;
@@ -11,68 +11,46 @@ const WORD_SIZE: usize = 4;
 
 /// pack array elements as tight as possible into on continuous block. This might lead
 /// to inefficiencies with array alignment (See [stride_strided])
-pub fn stride_packed<const N: usize>(dim: &[usize; N], elem_size: usize) -> [usize; N] {
+pub fn stride_packed<const N: usize>(shape: &[usize; N], elem_size: usize) -> [usize; N] {
     let mut stride = [elem_size; N];
     for index in (0..N - 1).rev() {
-        stride[index] = dim[index + 1] * stride[index + 1];
+        stride[index] = shape[index + 1] * stride[index + 1];
     }
     stride
 }
 
-/// align array elements to word boundaries so the cpu can load them using less 
+/// align array elements to word boundaries so the cpu can load them using less
 /// instructions
-pub fn stride_strided<const N: usize>(dim: &[usize; N], elem_size: usize) -> [usize; N] {
-    // TODO: clean this up, this is a really stupid way of doing it
-    let add = if elem_size.rem(WORD_SIZE) == 0 {
-        0
-    } else {
-        1
-    };
-    let padded_size = ((elem_size / WORD_SIZE) + add) * WORD_SIZE;
+pub fn stride_strided<const N: usize>(shape: &[usize; N], elem_size: usize) -> [usize; N] {
+    // the padded size is the next largest multiple of the word size
+    let padded_size = (1 + ((elem_size - 1) / WORD_SIZE)) * WORD_SIZE;
+
     let mut stride = [padded_size; N];
     for index in (0..N - 1).rev() {
-        stride[index] = dim[index + 1] * stride[index + 1];
+        stride[index] = shape[index + 1] * stride[index + 1];
     }
     stride
 }
 
-impl<T, const N: usize> Array<T, N> {
-    /// Create an uninitialized Array.
-    ///
-    /// # Safety
-    ///
-    /// This is unsafe because it leaves the arrays contents uninitialized, meaning that reading from them will
-    /// cause undefined behaviour.
-    pub unsafe fn uninitialized(dim: [usize; N]) -> Self {
-        let layout = Layout::array::<T>(dim.iter().product()).unwrap();
-        let ptr = alloc(layout.clone()) as *mut T;
-
-        Self {
-            ptr: ptr,
-            stride: stride_packed(&dim, std::mem::size_of::<T>()),
-            dim: dim,
-        }
-    }
-}
-
-impl<T, const N: usize> Drop for Array<T, N> {
+// FIXME: Other array types are not being dropped properly, this is dangerous!
+impl<T, const N: usize> Drop for BaseArray<T, N> {
     fn drop(&mut self) {
         unsafe {
             dealloc(
-                self.ptr as *mut u8,
+                self.ptr() as *mut u8,
                 Layout::array::<T>(self.size()).unwrap(),
             )
         };
     }
 }
 
-impl<T: Copy, const N: usize> Clone for Array<T, N> {
+impl<T: Copy, const N: usize> Clone for BaseArray<T, N> {
     fn clone(&self) -> Self {
         let cloned: Self;
 
         // Safe because we won't be reading from uninitialized memory.
         unsafe {
-            cloned = Array::uninitialized(self.dim);
+            cloned = BaseArray::uninitialized(&self.shape());
         }
 
         // Safe because
@@ -82,7 +60,7 @@ impl<T: Copy, const N: usize> Clone for Array<T, N> {
         // * both self and cloned are properly aligned
         // * self and cloned do not overlap
         unsafe {
-            std::ptr::copy_nonoverlapping(self.ptr, cloned.ptr, self.size());
+            std::ptr::copy_nonoverlapping(self.ptr(), cloned.ptr(), self.size());
         }
 
         cloned
@@ -91,15 +69,15 @@ impl<T: Copy, const N: usize> Clone for Array<T, N> {
 
 #[cfg(test)]
 mod tests {
+    use crate::allocation::{stride_packed, stride_strided};
     use crate::*;
-    use crate::allocation::stride_packed;
 
     #[test]
     fn alloc_dealloc() {
+        let mut a: Array1<usize>;
         // Safe because we won't be reading from uninitialized memory.
-        let mut a: Array<usize, 1>;
         unsafe {
-            a = Array::uninitialized([2]);
+            a = Array1::uninitialized(&[2]);
         }
         // Write
         let ref_1 = a._get_mut(0).unwrap();
@@ -113,14 +91,14 @@ mod tests {
 
     #[test]
     fn clone() {
-        let mut a: Array<usize, 1> = Array::fill(0, [2]);
+        let mut a: Array1<usize> = Array1::fill(0, &[2]);
         let mut b = a.clone();
 
         // assert that the arrays can be mutated independently of each other
-        *a.get_mut([1]).unwrap() = 3;
-        *b.get_mut([1]).unwrap() = 4;
-        assert_eq!(*a.get([1]).unwrap(), 3);
-        assert_eq!(*b.get([1]).unwrap(), 4);
+        *a.get_mut(&[1]).unwrap() = 3;
+        *b.get_mut(&[1]).unwrap() = 4;
+        assert_eq!(*a.get(&[1]).unwrap(), 3);
+        assert_eq!(*b.get(&[1]).unwrap(), 4);
     }
 
     #[test]
@@ -135,4 +113,3 @@ mod tests {
         let _stride = stride_strided(&[2, 3, 4], 2);
     }
 }
-

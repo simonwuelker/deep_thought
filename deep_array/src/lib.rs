@@ -2,10 +2,11 @@
 #![deny(missing_docs)]
 #![feature(array_zip)]
 
+pub mod allocation;
 pub mod array;
+pub mod array_trait;
 pub mod error;
 
-pub mod allocation;
 // mod arithmetic; // Does not work, deactivated for now
 mod prelude;
 
