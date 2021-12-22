@@ -1,4 +1,4 @@
-//! Contains the base [Array] type as well as the [BorrowedArray] Subtype.
+//! Contains the [BaseArray] type as well as the [BorrowedArray] Subtype.
 
 use crate::array_trait::{Array, Initialize};
 

@@ -1,11 +1,13 @@
-//! Contains the core [ArrayTrait] trait, which is the foundation of all matrix operations.
-//! It is implemented by [crate::array::Array] and [crate::array::BorrowedArray].
-//! Users can define their own array types by implementing [ArrayTrait].
+//! Contains the core [Array] trait, which is the foundation of all matrix operations.
+//! It is implemented by [BaseArray](crate::array::BaseArray) and
+//! [BorrowedArray](crate::array::BorrowedArray).
+//! Users can define their own array types by implementing [Array].
 
-use crate::allocation::{stride_packed, stride_strided};
-use crate::array::BorrowedArray;
+use crate::allocation::stride_packed;
+use crate::array::{BaseArray, BorrowedArray};
 use crate::error::Error;
 use std::alloc::{alloc, Layout};
+use std::fmt;
 
 /// Trait defining core Array behaviour
 pub trait Array<T, const N: usize> {
@@ -156,31 +158,6 @@ pub trait Array<T, const N: usize> {
         self.shape().iter().product()
     }
 
-    // TODO: This trait does NOT belong here
-    // /// Create a new instance of [Array] where every element is a clone of item.
-    // ///
-    // /// # Examples
-    // /// ```
-    // /// use deep_array::Array;
-    // ///
-    // /// let a: Array3<usize> = Array3::fill(0, [2, 2, 2]);
-    // /// ```
-    // fn fill(item: T, shape: &[usize; N]) -> Self
-    // where
-    //     T: Clone,
-    // {
-    //     // safe because we wont be reading from the uninitialized memory
-    //     let mut a: Self;
-    //     unsafe {
-    //         a = Self::uninitialized(shape);
-    //     }
-    //     for offset in 0..a.size() {
-    //         // safe because the offset never exceeds the array size
-    //         unsafe { *a._get_mut_unchecked(offset) = item.clone() }
-    //     }
-    //     a
-    // }
-
     /// Create a view of the array, containing references to the original data. Data must be
     /// borrowed in rectangular shape.
     ///
@@ -233,7 +210,7 @@ pub trait Initialize<T: Clone, const N: usize>: Array<T, N> + Sized {
     ///
     /// # Safety
     /// Implementors are neither required nor supposed to check if the address `ptr` is pointing to
-    /// is a valid array. As such, [from_raw_parts] is unsafe.
+    /// is a valid array. As such, [from_raw_parts](crate::array_trait::Initialize::from_raw_parts) is unsafe.
     unsafe fn from_raw_parts(ptr: *mut T, stride: [usize; N], shape: [usize; N]) -> Self;
 
     /// Create an uninitialized Array.
@@ -271,3 +248,56 @@ pub trait Initialize<T: Clone, const N: usize>: Array<T, N> + Sized {
         a
     }
 }
+
+// // Cannot make this generic over the Array trait - see https://stackoverflow.com/questions/65622443/implement-a-trait-for-a-generic-trait
+// // Should be acceptable - the number of array types should be kept low anyways.
+// impl<T: fmt::Debug, const N: usize> fmt::Debug for BaseArray<T, N> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         for dim_ix in 0..N {
+//             f.write_str("[")?;
+//             let mut ix_1 = [0; N];
+//             let mut ix_2 = self.shape().map(|x| x - 1);
+//             for elem_ix in 0..self.shape()[dim_ix] {
+//                 ix_1[dim_ix] = elem_ix;
+//                 ix_2[dim_ix] = elem_ix+1;
+//                 let b = self.borrow(&ix_1, &ix_2);
+//                 b.fmt(f)?;
+//             }
+//             f.write_str("]")?;
+// 
+//         }
+//         Ok(())
+//     }
+// }
+// 
+// impl<T: fmt::Debug, const N: usize> fmt::Debug for BorrowedArray<T, N> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         println!("I am a borrowed array and my shape is {:?}", self.shape());
+//         for dim_ix in 0..N {
+//             f.write_str("[\n")?;
+//             let mut ix_1 = self.shape();
+//             let mut ix_2 = self.shape();
+//             for elem_ix in 0..self.shape()[dim_ix] {
+//                 ix_1[dim_ix] = elem_ix;
+//                 ix_2[dim_ix] = elem_ix+1;
+//                 let b = self.borrow(&ix_1, &ix_2);
+//                 b.fmt(f)?;
+//             }
+//             f.write_str("\n]")?;
+// 
+//         }
+//         Ok(())
+//     }
+// }
+
+// #[cfg(test)]
+// mod tests {
+//     use crate::*;
+// 
+//     #[test]
+//     fn debug_view() {
+//         let a: Array2<usize> = Array2::fill(1, &[3, 3]);
+//         println!("{:?}", &a);
+//         assert!(false);
+//     }
+// }

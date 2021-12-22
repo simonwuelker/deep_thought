@@ -2,7 +2,7 @@
 
 use crate::array_trait::Initialize;
 use crate::{Array, BaseArray};
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{dealloc, Layout};
 
 #[cfg(target_pointer_width = "64")]
 const WORD_SIZE: usize = 8;
